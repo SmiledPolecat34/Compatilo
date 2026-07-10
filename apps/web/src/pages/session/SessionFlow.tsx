@@ -34,7 +34,7 @@ export default function SessionFlow() {
         setFavorites(new Set(payload.favorites));
         // Reprise automatique : on saute l'intro si des réponses existent déjà
         const hasProgress = Object.keys(payload.answers).length > 0;
-        setPhase(hasProgress ? 'quiz' : 'intro');
+        setPhase(hasProgress || payload.readOnly ? 'quiz' : 'intro');
         if (hasProgress) {
           const idx = payload.questionnaire.pages.findIndex((p) =>
             p.questions.some((q) => !(q.id in payload.answers)),
@@ -61,6 +61,7 @@ export default function SessionFlow() {
   const progress = allQuestions.length > 0 ? Math.round((answeredCount / allQuestions.length) * 100) : 0;
 
   const saveAnswer = useCallback(async (questionId: string, value: TrileanValue) => {
+    if (data?.readOnly) return;
     setAnswers((prev) => ({ ...prev, [questionId]: value }));
     setSaving(true);
     try {
@@ -74,10 +75,11 @@ export default function SessionFlow() {
     } finally {
       setSaving(false);
     }
-  }, []);
+  }, [data?.readOnly]);
 
   const toggleFavorite = useCallback(
     async (questionId: string) => {
+      if (data?.readOnly) return;
       const next = new Set(favorites);
       if (next.has(questionId)) next.delete(questionId);
       else if (next.size < (data?.favoritesRule.max ?? 5)) next.add(questionId);
@@ -175,6 +177,16 @@ export default function SessionFlow() {
         </div>
       </header>
 
+      {data.readOnly && (
+        <div className="mb-4 flex items-center gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+          <span aria-hidden className="text-lg">
+            🔒
+          </span>
+          Cette session est fermée : tu peux consulter tes réponses, mais plus rien ne peut être
+          modifié.
+        </div>
+      )}
+
       <main className="animate-fade-up" key={page.id}>
         <h2 className="mt-4 font-display text-2xl font-bold text-brand-900">{page.title}</h2>
         {page.description && <p className="mt-1 text-slate-500">{page.description}</p>}
@@ -193,9 +205,10 @@ export default function SessionFlow() {
                   <button
                     type="button"
                     onClick={() => toggleFavorite(q.id)}
+                    disabled={data.readOnly}
                     aria-label={isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}
                     aria-pressed={isFav}
-                    className={`shrink-0 rounded-full p-1.5 text-xl transition active:scale-90 ${
+                    className={`shrink-0 rounded-full p-1.5 text-xl transition active:scale-90 disabled:pointer-events-none disabled:opacity-50 ${
                       isFav ? 'text-amber-400' : 'text-slate-300 hover:text-amber-300'
                     }`}
                   >
@@ -203,7 +216,7 @@ export default function SessionFlow() {
                   </button>
                 </div>
                 {q.helpText && <p className="mt-1 text-sm text-slate-500">{q.helpText}</p>}
-                <div className="mt-4">
+                <div className={`mt-4 ${data.readOnly ? 'pointer-events-none opacity-60' : ''}`}>
                   <QuestionComponent
                     question={q}
                     value={answers[q.id]}
@@ -235,7 +248,11 @@ export default function SessionFlow() {
           <div className="flex-1 text-center text-sm text-slate-400">
             Page {pageIndex + 1}/{data.questionnaire.pages.length}
           </div>
-          {isLastPage ? (
+          {data.readOnly ? (
+            <button type="button" className="btn-primary" onClick={() => navigate('/session/report')}>
+              Voir le rapport
+            </button>
+          ) : isLastPage ? (
             <button
               type="button"
               className="btn-primary"
@@ -257,7 +274,7 @@ export default function SessionFlow() {
             </button>
           )}
         </div>
-        {isLastPage && (!allAnswered || !favoritesOk) && (
+        {!data.readOnly && isLastPage && (!allAnswered || !favoritesOk) && (
           <p className="mx-auto mt-2 max-w-2xl text-center text-xs text-slate-400">
             {!allAnswered
               ? `Il reste ${allQuestions.length - answeredCount} question(s) sans réponse.`

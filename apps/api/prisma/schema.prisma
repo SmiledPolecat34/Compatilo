@@ -35,6 +35,11 @@ model Admin {
   otpAttempts        Int             @default(0)
   otpLockedUntil     DateTime?
 
+  // Incrémenté pour révoquer d'un coup tous les jetons déjà émis
+  // ("déconnexion de tous les appareils") — chaque JWT embarque la valeur
+  // en vigueur au moment de sa signature et est rejeté si elle diverge.
+  tokenVersion Int @default(0)
+
   trustedDevices TrustedDevice[]
 }
 
@@ -120,9 +125,15 @@ model Question {
 
 // ─────────────────────────────── Session ─────────────────────────────
 
+// 🟢 ACTIVE (ouverte) → 🟡 COMPLETED (en attente, rapport généré) → 🔴 CLOSED
+// (fermée, verrouillée définitivement par l'admin) ; ARCHIVED = masquée.
+// CLOSED gèle toute écriture (réponses, favoris, signatures, nouveaux
+// participants) indépendamment de `reportAccessEnabled`, qui ne gouverne
+// que la lecture du rapport.
 enum SessionStatus {
   ACTIVE
   COMPLETED
+  CLOSED
   ARCHIVED
 }
 
@@ -148,6 +159,7 @@ model Session {
   identityDisplay     IdentityDisplay      @default(BOTH)
   playlistId          String?
   playlist            Playlist?            @relation(fields: [playlistId], references: [id], onDelete: SetNull)
+  closedAt            DateTime?
   privateNotes        String?
   failedAttempts      Int                  @default(0)
   lockedUntil         DateTime?

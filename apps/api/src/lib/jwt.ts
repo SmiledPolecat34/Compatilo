@@ -4,6 +4,9 @@ import { env } from '../config/env.js';
 export interface AdminToken {
   kind: 'admin';
   adminId: string;
+  // Doit correspondre à Admin.tokenVersion en base : permet de révoquer
+  // d'un coup tous les jetons émis avant une date donnée.
+  tokenVersion: number;
 }
 
 // Émis après le mot de passe, avant le second facteur : ne donne accès

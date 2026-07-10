@@ -18,6 +18,7 @@ function sessionSummary(s: {
   status: string;
   reportAccessEnabled: boolean;
   identityDisplay: string;
+  closedAt: Date | null;
   expiresAt: Date | null;
   createdAt: Date;
   participants: { slot: number; firstName: string; nickname: string | null; completedAt: Date | null }[];
@@ -32,6 +33,7 @@ function sessionSummary(s: {
     status: s.status,
     reportAccessEnabled: s.reportAccessEnabled,
     identityDisplay: s.identityDisplay,
+    closedAt: s.closedAt,
     expiresAt: s.expiresAt,
     createdAt: s.createdAt,
     questionnaire: `${s.version.questionnaire.title} (v${s.version.version})`,
@@ -176,6 +178,7 @@ adminSessionsRouter.get('/:id', async (req, res, next) => {
       status: s.status,
       reportAccessEnabled: s.reportAccessEnabled,
       identityDisplay: s.identityDisplay,
+      closedAt: s.closedAt,
       playlist: s.playlist,
       expiresAt: s.expiresAt,
       privateNotes: s.privateNotes,
@@ -283,6 +286,52 @@ adminSessionsRouter.get('/:id/timeline', async (req, res, next) => {
       take: 500,
     });
     res.json(events);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── Fermeture : verrouille définitivement la session ──────────────────
+// Plus de réponses, favoris, signatures ni nouveaux participants ; le
+// rapport (s'il existe) est figé. Indépendant de `reportAccessEnabled`,
+// qui ne gouverne que la lecture du rapport par l'invité.
+adminSessionsRouter.post('/:id/close', async (req, res, next) => {
+  try {
+    const existing = await prisma.session.findUnique({ where: { id: req.params.id } });
+    if (!existing) throw notFound();
+    if (existing.status === 'CLOSED') {
+      res.json({ ok: true });
+      return;
+    }
+    await prisma.session.update({
+      where: { id: req.params.id },
+      data: { status: 'CLOSED', closedAt: new Date() },
+    });
+    await logEvent(req.params.id, 'session.closed', 'Session fermée par l’administrateur');
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── Réouverture ─────────────────────────────────────────────────────
+adminSessionsRouter.post('/:id/reopen', async (req, res, next) => {
+  try {
+    const existing = await prisma.session.findUnique({
+      where: { id: req.params.id },
+      include: { report: { select: { id: true } } },
+    });
+    if (!existing) throw notFound();
+    if (existing.status !== 'CLOSED') {
+      res.json({ ok: true });
+      return;
+    }
+    await prisma.session.update({
+      where: { id: req.params.id },
+      data: { status: existing.report ? 'COMPLETED' : 'ACTIVE', closedAt: null },
+    });
+    await logEvent(req.params.id, 'session.reopened', 'Session rouverte par l’administrateur');
+    res.json({ ok: true });
   } catch (err) {
     next(err);
   }

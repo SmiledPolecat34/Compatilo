@@ -41,18 +41,14 @@ const otpLimiter = rateLimit({
   message: { error: 'Trop de tentatives, réessaie plus tard.' },
 });
 
-const adminCookieOptions = {
-  httpOnly: true,
-  secure: isProd,
-  sameSite: isProd ? ('none' as const) : ('lax' as const),
-  maxAge: 12 * 60 * 60 * 1000,
-  path: '/',
-};
-
 function trustedDeviceCookieOptions() {
   return {
     httpOnly: true,
     secure: isProd,
+    // "none" en production : frontend (Netlify) et API (Render) sont deux
+    // origines distinctes. Contrairement à l'ancien cookie d'accès admin
+    // (supprimé), celui-ci ne sert qu'à sauter le défi 2FA sur un login où
+    // le mot de passe a déjà été vérifié — impact limité en cas d'abus.
     sameSite: isProd ? ('none' as const) : ('lax' as const),
     maxAge: env.TRUSTED_DEVICE_DAYS * 24 * 60 * 60 * 1000,
     path: '/api/admin/auth',
@@ -63,9 +59,11 @@ function activeMethod(admin: { twoFactorMethod: string; totpEnabled: boolean }) 
   return admin.totpEnabled ? 'TOTP' : admin.twoFactorMethod === 'TOTP' ? 'TOTP' : 'EMAIL_OTP';
 }
 
-async function issueAdminSession(res: import('express').Response, adminId: string, email: string) {
-  const token = signToken({ kind: 'admin', adminId }, '12h');
-  res.cookie('compatilo_admin', token, adminCookieOptions);
+// L'unique jeton d'accès admin est renvoyé dans le corps de la réponse et
+// stocké côté client (jamais en cookie) : immunité CSRF de fait, puisque le
+// navigateur ne l'attache jamais automatiquement à une requête forgée.
+function issueAdminSession(adminId: string, email: string, tokenVersion: number) {
+  const token = signToken({ kind: 'admin', adminId, tokenVersion }, '12h');
   return { token, email };
 }
 
@@ -93,7 +91,7 @@ adminAuthRouter.post('/login', loginLimiter, validateBody(loginSchema), async (r
     if (!admin || !ok) throw unauthorized('Identifiants incorrects.');
 
     if (await isTrustedDevice(req, admin.id)) {
-      const session = await issueAdminSession(res, admin.id, admin.email);
+      const session = issueAdminSession(admin.id, admin.email, admin.tokenVersion);
       res.json({ ...session, twoFactorSkipped: true });
       return;
     }
@@ -179,7 +177,7 @@ adminAuthRouter.post('/verify-2fa', otpLimiter, validateBody(verifySchema), asyn
       data: { otpAttempts: 0, otpLockedUntil: null, otpCodeHash: null, otpExpiresAt: null },
     });
 
-    const session = await issueAdminSession(res, admin.id, admin.email);
+    const session = issueAdminSession(admin.id, admin.email, admin.tokenVersion);
 
     if (rememberDevice) {
       const deviceToken = generateDeviceToken();
@@ -229,13 +227,37 @@ adminAuthRouter.post('/resend-otp', otpLimiter, validateBody(resendSchema), asyn
 });
 
 adminAuthRouter.post('/logout', (_req, res) => {
-  res.clearCookie('compatilo_admin', { path: '/' });
   res.json({ ok: true });
 });
 
 adminAuthRouter.get('/me', requireAdmin, async (req, res) => {
   const admin = await prisma.admin.findUnique({ where: { id: req.adminId! } });
   res.json({ email: admin?.email });
+});
+
+// ── Rotation : ré-émet un jeton frais (prolonge la session sans mot de passe) ──
+adminAuthRouter.post('/refresh', requireAdmin, async (req, res, next) => {
+  try {
+    const admin = await prisma.admin.findUniqueOrThrow({ where: { id: req.adminId! } });
+    res.json(issueAdminSession(admin.id, admin.email, admin.tokenVersion));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── Révocation : invalide instantanément tous les jetons déjà émis ───
+// ("déconnexion de tous les appareils"), y compris celui de cette requête.
+adminAuthRouter.post('/revoke-all', requireAdmin, async (req, res, next) => {
+  try {
+    await prisma.admin.update({
+      where: { id: req.adminId! },
+      data: { tokenVersion: { increment: 1 } },
+    });
+    await prisma.trustedDevice.deleteMany({ where: { adminId: req.adminId! } });
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
 });
 
 // ── Réglages 2FA (une fois connecté) ──────────────────────────────────

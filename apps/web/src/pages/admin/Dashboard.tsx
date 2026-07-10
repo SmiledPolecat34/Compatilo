@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../../api/client';
 import type { IdentityDisplayMode, PlaylistSummary, QuestionnaireListItem, SessionSummary } from '../../types';
+import SessionStatusBadge from '../../components/SessionStatusBadge';
 
 const IDENTITY_LABELS: Record<IdentityDisplayMode, string> = {
   FIRST_NAME: 'Prénom',
@@ -70,7 +71,7 @@ export default function Dashboard() {
                       ? s.participants.map((p) => p.firstName).join(' & ')
                       : 'Session sans nom')}
                 </div>
-                <StatusBadge status={s.status} />
+                <SessionStatusBadge status={s.status} />
               </div>
               <p className="mt-1 text-xs text-slate-400">{s.questionnaire}</p>
               <div className="mt-3 flex items-center gap-2 text-sm text-slate-500">
@@ -111,24 +112,6 @@ export default function Dashboard() {
       )}
       {created && <InviteModal created={created} onClose={() => setCreated(null)} />}
     </div>
-  );
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const styles: Record<string, string> = {
-    ACTIVE: 'bg-brand-100 text-brand-700',
-    COMPLETED: 'bg-emerald-100 text-emerald-700',
-    ARCHIVED: 'bg-slate-100 text-slate-500',
-  };
-  const labels: Record<string, string> = {
-    ACTIVE: 'Active',
-    COMPLETED: 'Terminée',
-    ARCHIVED: 'Archivée',
-  };
-  return (
-    <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${styles[status] ?? ''}`}>
-      {labels[status] ?? status}
-    </span>
   );
 }
 

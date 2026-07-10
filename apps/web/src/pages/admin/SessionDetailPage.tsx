@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../../api/client';
 import type { IdentityDisplayMode, PlaylistSummary, SessionDetail, TimelineEvent } from '../../types';
 import ReportView from '../../components/report/ReportView';
+import SessionStatusBadge from '../../components/SessionStatusBadge';
 
 const IDENTITY_LABELS: Record<IdentityDisplayMode, string> = {
   FIRST_NAME: 'Prénom',
@@ -24,6 +25,8 @@ const EVENT_ICONS: Record<string, string> = {
   'signature.saved': '✍️',
   'access.enabled': '🔓',
   'access.disabled': '🔒',
+  'session.closed': '🔴',
+  'session.reopened': '🟢',
 };
 
 export default function SessionDetailPage() {
@@ -99,6 +102,23 @@ export default function SessionDetailPage() {
     navigate('/admin');
   }
 
+  async function closeSession() {
+    if (
+      !window.confirm(
+        'Fermer cette session ? Plus personne ne pourra répondre, se signer, ni rejoindre. Le rapport sera figé.',
+      )
+    )
+      return;
+    await api(`/api/admin/sessions/${id}/close`, { method: 'POST', auth: 'admin' });
+    load();
+  }
+
+  async function reopenSession() {
+    if (!window.confirm('Rouvrir cette session ?')) return;
+    await api(`/api/admin/sessions/${id}/reopen`, { method: 'POST', auth: 'admin' });
+    load();
+  }
+
   if (!session) {
     return <div className="p-10 text-center text-slate-500">Chargement…</div>;
   }
@@ -110,22 +130,47 @@ export default function SessionDetailPage() {
       </Link>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-display text-3xl font-bold text-brand-900">
-            {session.label ||
-              session.participants.map((p) => p.firstName).join(' & ') ||
-              'Session sans nom'}
-          </h1>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="font-display text-3xl font-bold text-brand-900">
+              {session.label ||
+                session.participants.map((p) => p.firstName).join(' & ') ||
+                'Session sans nom'}
+            </h1>
+            <SessionStatusBadge status={session.status} />
+          </div>
           <p className="mt-1 text-sm text-slate-400">
             {session.questionnaire} · créée le{' '}
             {new Date(session.createdAt).toLocaleString('fr-FR')}
             {session.expiresAt &&
               ` · expire le ${new Date(session.expiresAt).toLocaleDateString('fr-FR')}`}
+            {session.closedAt && ` · fermée le ${new Date(session.closedAt).toLocaleString('fr-FR')}`}
           </p>
         </div>
-        <button type="button" className="btn-ghost text-rose-500" onClick={remove}>
-          Supprimer
-        </button>
+        <div className="flex gap-2">
+          {session.status === 'CLOSED' ? (
+            <button type="button" className="btn-secondary" onClick={reopenSession}>
+              Rouvrir la session
+            </button>
+          ) : (
+            <button type="button" className="btn-secondary" onClick={closeSession}>
+              Fermer la session
+            </button>
+          )}
+          <button type="button" className="btn-ghost text-rose-500" onClick={remove}>
+            Supprimer
+          </button>
+        </div>
       </div>
+
+      {session.status === 'CLOSED' && (
+        <div className="mb-6 flex items-center gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+          <span aria-hidden className="text-lg">
+            🔒
+          </span>
+          Session fermée : réponses, favoris, signatures et nouveaux participants sont bloqués. Le
+          rapport reste consultable si l'accès invité est activé, mais plus rien ne peut changer.
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">

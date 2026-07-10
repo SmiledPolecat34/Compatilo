@@ -20,6 +20,7 @@ export interface PageDto {
 export interface QuestionnairePayload {
   questionnaire: { title: string; description: string | null; pages: PageDto[] };
   participant: { firstName: string; slot: number; completed: boolean };
+  readOnly: boolean;
   answers: Record<string, TrileanValue>;
   favorites: string[];
   favoritesRule: { min: number; max: number };
@@ -76,14 +77,16 @@ export interface ReportPayload {
 // ── Admin ──────────────────────────────────────────────────────────────
 
 export type IdentityDisplayMode = 'FIRST_NAME' | 'NICKNAME' | 'BOTH' | 'NONE';
+export type SessionStatus = 'ACTIVE' | 'COMPLETED' | 'CLOSED' | 'ARCHIVED';
 
 export interface SessionSummary {
   id: string;
   publicId: string;
   label: string | null;
-  status: string;
+  status: SessionStatus;
   reportAccessEnabled: boolean;
   identityDisplay: IdentityDisplayMode;
+  closedAt: string | null;
   expiresAt: string | null;
   createdAt: string;
   questionnaire: string;
@@ -96,9 +99,10 @@ export interface SessionDetail {
   id: string;
   publicId: string;
   label: string | null;
-  status: string;
+  status: SessionStatus;
   reportAccessEnabled: boolean;
   identityDisplay: IdentityDisplayMode;
+  closedAt: string | null;
   playlist: { id: string; name: string } | null;
   expiresAt: string | null;
   privateNotes: string | null;

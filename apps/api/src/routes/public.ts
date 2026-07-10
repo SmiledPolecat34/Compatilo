@@ -30,6 +30,17 @@ const pinLimiter = rateLimit({
 
 const pinSchema = z.object({ pin: z.string().regex(/^\d{6}$/, 'PIN à 6 chiffres attendu') });
 
+/** Bloque toute écriture participant sur une session fermée par l'admin. */
+async function assertSessionWritable(sessionId: string) {
+  const session = await prisma.session.findUniqueOrThrow({
+    where: { id: sessionId },
+    select: { status: true },
+  });
+  if (session.status === 'CLOSED') {
+    throw forbidden('Cette session est fermée : aucune modification n’est plus possible.');
+  }
+}
+
 async function findSessionByPin(pin: string) {
   const session = await prisma.session.findUnique({
     where: { pinLookup: pinLookup(pin) },
@@ -109,6 +120,9 @@ publicRouter.post('/join/enter', pinLimiter, validateBody(enterSchema), async (r
       if (!participant) throw notFound('Participant introuvable.');
       await logEvent(session.id, 'participant.resumed', `${participant.firstName} est revenu·e`);
     } else {
+      if (session.status === 'CLOSED') {
+        throw forbidden('Cette session est fermée : elle n’accepte plus de nouveaux participants.');
+      }
       if (!firstName) throw badRequest('Le prénom est requis.');
       if (session.participants.length >= 2) {
         throw forbidden('Cette session est déjà complète (deux participants).');
@@ -209,6 +223,7 @@ publicRouter.get('/me/questionnaire', requireParticipant, async (req, res, next)
         slot: participant.slot,
         completed: Boolean(participant.completedAt),
       },
+      readOnly: session.status === 'CLOSED',
       answers: Object.fromEntries(participant.answers.map((a) => [a.questionId, a.value])),
       favorites: participant.favorites.map((f) => f.questionId),
       favoritesRule: { min: FAVORITES_MIN, max: FAVORITES_MAX },
@@ -235,6 +250,7 @@ publicRouter.put(
         where: { id: participantId },
       });
       if (participant.completedAt) throw forbidden('Le questionnaire est déjà terminé.');
+      await assertSessionWritable(sessionId);
 
       // La question doit appartenir au questionnaire de la session
       const question = await prisma.question.findFirst({
@@ -274,6 +290,7 @@ publicRouter.put(
   async (req, res, next) => {
     try {
       const { participantId, sessionId } = req.participant!;
+      await assertSessionWritable(sessionId);
       const ids: string[] = [...new Set(req.body.questionIds as string[])];
 
       const valid = await prisma.question.count({
@@ -313,6 +330,7 @@ publicRouter.post('/me/complete', requireParticipant, async (req, res, next) => 
       res.json({ ok: true, alreadyCompleted: true });
       return;
     }
+    await assertSessionWritable(sessionId);
 
     const requiredQuestions = await prisma.question.findMany({
       where: {
@@ -406,6 +424,7 @@ publicRouter.post(
   async (req, res, next) => {
     try {
       const { sessionId, participantId } = req.participant!;
+      await assertSessionWritable(sessionId);
       const report = await prisma.report.findUnique({ where: { sessionId } });
       if (!report) throw notFound("Le rapport n'est pas encore disponible.");
 

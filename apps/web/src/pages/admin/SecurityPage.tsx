@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import QRCode from 'qrcode';
-import { api } from '../../api/client';
+import { api, tokens } from '../../api/client';
 import type { TwoFactorStatus } from '../../types';
 
 export default function SecurityPage() {
+  const navigate = useNavigate();
   const [status, setStatus] = useState<TwoFactorStatus | null>(null);
   const [enrolling, setEnrolling] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState('');
@@ -57,6 +59,18 @@ export default function SecurityPage() {
   async function revokeDevice(id: string) {
     await api(`/api/admin/auth/2fa/trusted-devices/${id}`, { method: 'DELETE', auth: 'admin' });
     load();
+  }
+
+  async function revokeAll() {
+    if (
+      !window.confirm(
+        'Déconnecter tous les appareils (y compris celui-ci) ? Une nouvelle connexion sera nécessaire.',
+      )
+    )
+      return;
+    await api('/api/admin/auth/revoke-all', { method: 'POST', auth: 'admin' });
+    tokens.clear('admin');
+    navigate('/admin/login');
   }
 
   if (!status) return <div className="p-10 text-center text-slate-500">Chargement…</div>;
@@ -138,6 +152,17 @@ export default function SecurityPage() {
             ))}
           </div>
         )}
+      </section>
+
+      <section className="card p-6">
+        <h2 className="font-display text-lg font-bold text-brand-900">Sessions actives</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          En cas de doute (appareil perdu, accès partagé), invalide immédiatement tous les jetons
+          de connexion déjà émis, y compris celui utilisé sur cet appareil.
+        </p>
+        <button type="button" className="btn-ghost mt-4 text-rose-500" onClick={revokeAll}>
+          Se déconnecter de tous les appareils
+        </button>
       </section>
     </div>
   );

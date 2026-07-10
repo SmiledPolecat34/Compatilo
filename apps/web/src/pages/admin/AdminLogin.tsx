@@ -55,7 +55,7 @@ export default function AdminLogin() {
     try {
       const result = await api<LoginSuccess>('/api/admin/auth/verify-2fa', {
         method: 'POST',
-        body: { pendingToken, code, rememberDevice },
+        body: { pendingToken, code, rememberDevice: method === 'EMAIL_OTP' && rememberDevice },
       });
       tokens.set('admin', result.token);
       navigate('/admin');
@@ -142,7 +142,8 @@ export default function AdminLogin() {
                 required
               />
             </div>
-            <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600">
+            {method === 'EMAIL_OTP' && (
+              <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600">
               <input
                 type="checkbox"
                 className="h-4 w-4 accent-brand-600"
@@ -150,7 +151,8 @@ export default function AdminLogin() {
                 onChange={(e) => setRememberDevice(e.target.checked)}
               />
               Mémoriser cet appareil
-            </label>
+              </label>
+            )}
             {error && <p className="text-sm font-medium text-rose-600">{error}</p>}
             <button
               type="submit"
@@ -162,7 +164,7 @@ export default function AdminLogin() {
             <div className="flex items-center justify-between text-sm">
               <button
                 type="button"
-                className="btn-ghost text-slate-400"
+                className="btn-ghost text-slate-500"
                 onClick={() => setStep('password')}
               >
                 ← Retour

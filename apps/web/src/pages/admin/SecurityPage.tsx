@@ -3,9 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import QRCode from 'qrcode';
 import { api, tokens } from '../../api/client';
 import type { TwoFactorStatus } from '../../types';
+import { Skeleton } from '../../components/Skeleton';
+import { useToast } from '../../components/ToastProvider';
 
 export default function SecurityPage() {
   const navigate = useNavigate();
+  const toast = useToast();
   const [status, setStatus] = useState<TwoFactorStatus | null>(null);
   const [enrolling, setEnrolling] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState('');
@@ -15,8 +18,10 @@ export default function SecurityPage() {
   const [loading, setLoading] = useState(false);
 
   const load = useCallback(() => {
-    api<TwoFactorStatus>('/api/admin/auth/2fa', { auth: 'admin' }).then(setStatus);
-  }, []);
+    api<TwoFactorStatus>('/api/admin/auth/2fa', { auth: 'admin' })
+      .then(setStatus)
+      .catch((err) => toast.error(err instanceof Error ? err.message : 'Chargement impossible.'));
+  }, [toast]);
 
   useEffect(load, [load]);
 
@@ -42,6 +47,7 @@ export default function SecurityPage() {
       await api('/api/admin/auth/2fa/totp/enable', { method: 'POST', body: { code }, auth: 'admin' });
       setEnrolling(false);
       setCode('');
+      toast.success('Application d’authentification activée.');
       load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur');
@@ -52,13 +58,23 @@ export default function SecurityPage() {
 
   async function disableTotp() {
     if (!window.confirm('Revenir au code envoyé par e-mail comme méthode de connexion ?')) return;
-    await api('/api/admin/auth/2fa/totp/disable', { method: 'POST', auth: 'admin' });
-    load();
+    try {
+      await api('/api/admin/auth/2fa/totp/disable', { method: 'POST', auth: 'admin' });
+      toast.success('Retour au code par e-mail.');
+      load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur');
+    }
   }
 
   async function revokeDevice(id: string) {
-    await api(`/api/admin/auth/2fa/trusted-devices/${id}`, { method: 'DELETE', auth: 'admin' });
-    load();
+    try {
+      await api(`/api/admin/auth/2fa/trusted-devices/${id}`, { method: 'DELETE', auth: 'admin' });
+      toast.success('Appareil révoqué.');
+      load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur');
+    }
   }
 
   async function revokeAll() {
@@ -68,12 +84,24 @@ export default function SecurityPage() {
       )
     )
       return;
-    await api('/api/admin/auth/revoke-all', { method: 'POST', auth: 'admin' });
-    tokens.clear('admin');
-    navigate('/admin/login');
+    try {
+      await api('/api/admin/auth/revoke-all', { method: 'POST', auth: 'admin' });
+      tokens.clear('admin');
+      navigate('/admin/login');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur');
+    }
   }
 
-  if (!status) return <div className="p-10 text-center text-slate-500">Chargement…</div>;
+  if (!status) {
+    return (
+      <div className="animate-fade-up space-y-6">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-40 w-full" />
+        <Skeleton className="h-32 w-full" />
+      </div>
+    );
+  }
 
   return (
     <div className="animate-fade-up space-y-6">
@@ -131,7 +159,7 @@ export default function SecurityPage() {
       <section className="card p-6">
         <h2 className="font-display text-lg font-bold text-brand-900">Appareils de confiance</h2>
         <p className="mt-1 text-sm text-slate-500">
-          Mémorisés jusqu'à {status.trustedDeviceDays} jours — le 2FA est sauté sur ces appareils.
+          Mémorisés jusqu'à {status.trustedDeviceDays} jours — le code e-mail est sauté sur ces appareils.
         </p>
         {status.trustedDevices.length === 0 ? (
           <p className="mt-4 text-slate-500">Aucun appareil mémorisé.</p>
@@ -141,7 +169,7 @@ export default function SecurityPage() {
               <div key={d.id} className="flex items-center justify-between rounded-xl border border-brand-100 p-3 text-sm">
                 <div>
                   <p className="font-medium text-slate-700">{d.label || 'Appareil inconnu'}</p>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-slate-500">
                     Dernière utilisation : {new Date(d.lastUsedAt).toLocaleString('fr-FR')}
                   </p>
                 </div>

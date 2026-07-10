@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, tokens } from '../api/client';
+import { useEscapeToClose } from '../hooks/useEscapeToClose';
 
 interface CheckResult {
   label: string | null;
@@ -43,6 +44,8 @@ export default function PinModal({
       setError('');
     }
   }, [open, initialPin]);
+
+  useEscapeToClose(open, onClose);
 
   if (!open) return null;
 
@@ -135,7 +138,7 @@ export default function PinModal({
             {step === 'who' && 'Qui es-tu ?'}
             {step === 'profile' && 'Fais-toi connaître'}
           </h2>
-          <button type="button" className="btn-ghost -mr-2 -mt-1 text-slate-400" onClick={onClose} aria-label="Fermer">
+          <button type="button" className="btn-ghost -mr-2 -mt-1 text-slate-500" onClick={onClose} aria-label="Fermer">
             ✕
           </button>
         </div>

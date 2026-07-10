@@ -12,9 +12,12 @@ import { CSS } from '@dnd-kit/utilities';
 import { api, apiUpload } from '../../api/client';
 import type { MusicSettingsDto, PlaylistSummary } from '../../types';
 import type { Playlist, Track } from '../../music/types';
+import { Skeleton } from '../../components/Skeleton';
+import { useToast } from '../../components/ToastProvider';
 
 export default function MusicPage() {
-  const [playlists, setPlaylists] = useState<PlaylistSummary[]>([]);
+  const toast = useToast();
+  const [playlists, setPlaylists] = useState<PlaylistSummary[] | null>(null);
   const [settings, setSettings] = useState<MusicSettingsDto | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detail, setDetail] = useState<Playlist | null>(null);
@@ -26,13 +29,17 @@ export default function MusicPage() {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   const loadList = useCallback(async () => {
-    const [pls, s] = await Promise.all([
-      api<PlaylistSummary[]>('/api/admin/music/playlists', { auth: 'admin' }),
-      api<MusicSettingsDto>('/api/admin/music/settings', { auth: 'admin' }),
-    ]);
-    setPlaylists(pls);
-    setSettings(s);
-  }, []);
+    try {
+      const [pls, s] = await Promise.all([
+        api<PlaylistSummary[]>('/api/admin/music/playlists', { auth: 'admin' }),
+        api<MusicSettingsDto>('/api/admin/music/settings', { auth: 'admin' }),
+      ]);
+      setPlaylists(pls);
+      setSettings(s);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Chargement impossible.');
+    }
+  }, [toast]);
 
   const loadDetail = useCallback(async (id: string) => {
     setDetail(await api<Playlist>(`/api/admin/music/playlists/${id}`, { auth: 'admin' }));
@@ -65,29 +72,44 @@ export default function MusicPage() {
   }
 
   async function setAsDefault(id: string) {
-    await api(`/api/admin/music/playlists/${id}`, {
-      method: 'PATCH',
-      body: { isDefault: true },
-      auth: 'admin',
-    });
-    await loadList();
+    try {
+      await api(`/api/admin/music/playlists/${id}`, {
+        method: 'PATCH',
+        body: { isDefault: true },
+        auth: 'admin',
+      });
+      toast.success('Playlist définie par défaut.');
+      await loadList();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur');
+    }
   }
 
   async function deletePlaylist(id: string) {
     if (!window.confirm('Supprimer cette playlist ? Les pistes non utilisées ailleurs seront supprimées.')) return;
-    await api(`/api/admin/music/playlists/${id}`, { method: 'DELETE', auth: 'admin' });
-    if (selectedId === id) setSelectedId(null);
-    await loadList();
+    try {
+      await api(`/api/admin/music/playlists/${id}`, { method: 'DELETE', auth: 'admin' });
+      if (selectedId === id) setSelectedId(null);
+      toast.success('Playlist supprimée.');
+      await loadList();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Suppression impossible.');
+    }
   }
 
   async function toggleEnabled() {
     if (!settings) return;
-    const updated = await api<MusicSettingsDto>('/api/admin/music/settings', {
-      method: 'PATCH',
-      body: { enabled: !settings.enabled },
-      auth: 'admin',
-    });
-    setSettings(updated);
+    try {
+      const updated = await api<MusicSettingsDto>('/api/admin/music/settings', {
+        method: 'PATCH',
+        body: { enabled: !settings.enabled },
+        auth: 'admin',
+      });
+      setSettings(updated);
+      toast.success(updated.enabled ? 'Musique activée.' : 'Musique désactivée.');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur');
+    }
   }
 
   async function uploadFile(file: File) {
@@ -98,6 +120,7 @@ export default function MusicPage() {
       const formData = new FormData();
       formData.append('file', file);
       await apiUpload(`/api/admin/music/playlists/${selectedId}/tracks/upload`, formData);
+      toast.success('Piste ajoutée.');
       await Promise.all([loadDetail(selectedId), loadList()]);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur');
@@ -117,6 +140,7 @@ export default function MusicPage() {
         auth: 'admin',
       });
       setYoutubeUrl('');
+      toast.success('Vidéo YouTube ajoutée.');
       await Promise.all([loadDetail(selectedId), loadList()]);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur');
@@ -127,11 +151,15 @@ export default function MusicPage() {
 
   async function removeTrack(trackId: string) {
     if (!selectedId) return;
-    await api(`/api/admin/music/playlists/${selectedId}/tracks/${trackId}`, {
-      method: 'DELETE',
-      auth: 'admin',
-    });
-    await Promise.all([loadDetail(selectedId), loadList()]);
+    try {
+      await api(`/api/admin/music/playlists/${selectedId}/tracks/${trackId}`, {
+        method: 'DELETE',
+        auth: 'admin',
+      });
+      await Promise.all([loadDetail(selectedId), loadList()]);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Suppression impossible.');
+    }
   }
 
   async function onDragEnd(event: DragEndEvent) {
@@ -142,11 +170,15 @@ export default function MusicPage() {
     const to = detail.tracks.findIndex((t) => t.id === over.id);
     const reordered = arrayMove(detail.tracks, from, to);
     setDetail({ ...detail, tracks: reordered });
-    await api(`/api/admin/music/playlists/${selectedId}/tracks/order`, {
-      method: 'PUT',
-      body: { trackIds: reordered.map((t) => t.id) },
-      auth: 'admin',
-    });
+    try {
+      await api(`/api/admin/music/playlists/${selectedId}/tracks/order`, {
+        method: 'PUT',
+        body: { trackIds: reordered.map((t) => t.id) },
+        auth: 'admin',
+      });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Réordonnancement impossible.');
+    }
   }
 
   return (
@@ -166,9 +198,15 @@ export default function MusicPage() {
         )}
       </div>
 
+      {playlists === null ? (
+        <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
+          <Skeleton className="h-64 w-full" />
+          <Skeleton className="h-96 w-full" />
+        </div>
+      ) : (
       <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
         <aside className="card h-fit p-4">
-          <h2 className="mb-3 px-2 text-sm font-bold uppercase tracking-wide text-slate-400">Playlists</h2>
+          <h2 className="mb-3 px-2 text-sm font-bold uppercase tracking-wide text-slate-500">Playlists</h2>
           <ul className="space-y-1">
             {playlists.map((p) => (
               <li key={p.id}>
@@ -196,7 +234,12 @@ export default function MusicPage() {
               onChange={(e) => setNewName(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && createPlaylist()}
             />
-            <button type="button" className="btn-secondary shrink-0" onClick={createPlaylist}>
+            <button
+              type="button"
+              className="btn-secondary shrink-0"
+              onClick={createPlaylist}
+              aria-label="Créer la playlist"
+            >
               +
             </button>
           </div>
@@ -264,12 +307,13 @@ export default function MusicPage() {
                 </SortableContext>
               </DndContext>
               {detail.tracks.length === 0 && (
-                <p className="text-center text-slate-400">Cette playlist est vide.</p>
+                <p className="text-center text-slate-500">Cette playlist est vide.</p>
               )}
             </div>
           )}
         </main>
       </div>
+      )}
     </div>
   );
 }
@@ -299,7 +343,7 @@ function SortableTrack({ track, onRemove }: { track: Track; onRemove: () => void
       )}
       <div className="min-w-0 flex-1">
         <p className="truncate font-medium text-slate-700">{track.title}</p>
-        <p className="text-xs text-slate-400">{track.type === 'YOUTUBE' ? 'YouTube' : 'Fichier local'}</p>
+        <p className="text-xs text-slate-500">{track.type === 'YOUTUBE' ? 'YouTube' : 'Fichier local'}</p>
       </div>
       <button type="button" className="btn-ghost text-rose-500" onClick={onRemove}>
         Retirer

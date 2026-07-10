@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { api, tokens } from '../../api/client';
 import Logo from '../../components/Logo';
+import { PageSpinner } from '../../components/Skeleton';
+import ThemeToggle from '../../theme/ThemeToggle';
 
 export default function AdminLayout() {
   const navigate = useNavigate();
@@ -20,7 +22,7 @@ export default function AdminLayout() {
   }
 
   if (!ready) {
-    return <div className="flex min-h-dvh items-center justify-center text-slate-500">Chargement…</div>;
+    return <PageSpinner />;
   }
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
@@ -48,9 +50,10 @@ export default function AdminLayout() {
           <NavLink to="/admin/security" className={linkClass}>
             Sécurité
           </NavLink>
-          <button type="button" className="btn-ghost text-slate-400" onClick={logout}>
+          <button type="button" className="btn-ghost text-slate-500" onClick={logout}>
             Déconnexion
           </button>
+          <ThemeToggle />
         </nav>
       </header>
       <Outlet />

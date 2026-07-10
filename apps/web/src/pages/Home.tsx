@@ -51,7 +51,7 @@ export default function Home() {
 
         <button
           type="button"
-          className="btn-ghost mt-10 text-sm text-slate-400"
+          className="btn-ghost mt-10 text-sm text-slate-500"
           onClick={() => setAdminModalOpen(true)}
         >
           Administration

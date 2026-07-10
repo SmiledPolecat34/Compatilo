@@ -3,6 +3,9 @@ import { Link } from 'react-router-dom';
 import { api } from '../../api/client';
 import type { IdentityDisplayMode, PlaylistSummary, QuestionnaireListItem, SessionSummary } from '../../types';
 import SessionStatusBadge from '../../components/SessionStatusBadge';
+import { SkeletonCards } from '../../components/Skeleton';
+import { useToast } from '../../components/ToastProvider';
+import { useEscapeToClose } from '../../hooks/useEscapeToClose';
 
 const IDENTITY_LABELS: Record<IdentityDisplayMode, string> = {
   FIRST_NAME: 'Prénom',
@@ -19,16 +22,22 @@ interface CreatedSession {
 }
 
 export default function Dashboard() {
-  const [sessions, setSessions] = useState<SessionSummary[]>([]);
+  const toast = useToast();
+  const [sessions, setSessions] = useState<SessionSummary[] | null>(null);
   const [query, setQuery] = useState('');
   const [created, setCreated] = useState<CreatedSession | null>(null);
   const [showCreate, setShowCreate] = useState(false);
 
-  const load = useCallback((q = '') => {
-    api<SessionSummary[]>(`/api/admin/sessions${q ? `?q=${encodeURIComponent(q)}` : ''}`, {
-      auth: 'admin',
-    }).then(setSessions);
-  }, []);
+  const load = useCallback(
+    (q = '') => {
+      api<SessionSummary[]>(`/api/admin/sessions${q ? `?q=${encodeURIComponent(q)}` : ''}`, {
+        auth: 'admin',
+      })
+        .then(setSessions)
+        .catch((err) => toast.error(err instanceof Error ? err.message : 'Chargement impossible.'));
+    },
+    [toast],
+  );
 
   useEffect(() => {
     const timer = setTimeout(() => load(query), 250);
@@ -52,7 +61,9 @@ export default function Dashboard() {
         aria-label="Rechercher une session"
       />
 
-      {sessions.length === 0 ? (
+      {sessions === null ? (
+        <SkeletonCards />
+      ) : sessions.length === 0 ? (
         <div className="card p-10 text-center text-slate-500">
           Aucune session. Crée ta première session pour inviter un duo !
         </div>
@@ -73,7 +84,7 @@ export default function Dashboard() {
                 </div>
                 <SessionStatusBadge status={s.status} />
               </div>
-              <p className="mt-1 text-xs text-slate-400">{s.questionnaire}</p>
+              <p className="mt-1 text-xs text-slate-500">{s.questionnaire}</p>
               <div className="mt-3 flex items-center gap-2 text-sm text-slate-500">
                 {s.participants.length === 0 && <span>Personne n'a encore rejoint</span>}
                 {s.participants.map((p) => (
@@ -92,7 +103,7 @@ export default function Dashboard() {
                   {s.report.code} — {s.report.score}%
                 </div>
               )}
-              <div className="mt-2 text-xs text-slate-400">
+              <div className="mt-2 text-xs text-slate-500">
                 {new Date(s.createdAt).toLocaleDateString('fr-FR')}
               </div>
             </Link>
@@ -260,10 +271,16 @@ function CreateSessionModal({
 }
 
 function InviteModal({ created, onClose }: { created: CreatedSession; onClose: () => void }) {
+  const toast = useToast();
   const [copied, setCopied] = useState(false);
 
   async function copy() {
-    await navigator.clipboard.writeText(created.inviteMessage);
+    try {
+      await navigator.clipboard.writeText(created.inviteMessage);
+    } catch {
+      toast.error('Copie impossible — sélectionne et copie le message manuellement.');
+      return;
+    }
     setCopied(true);
     api(`/api/admin/sessions/${created.id}/invite-copied`, { method: 'POST', auth: 'admin' }).catch(
       () => undefined,
@@ -279,7 +296,7 @@ function InviteModal({ created, onClose }: { created: CreatedSession; onClose: (
           <p className="mt-1 font-display text-4xl font-bold tracking-[0.3em] text-brand-800">
             {created.pin}
           </p>
-          <p className="mt-2 text-xs text-slate-400">
+          <p className="mt-2 text-xs text-slate-500">
             Affiché une seule fois — note-le ou copie l'invitation.
           </p>
         </div>
@@ -303,6 +320,7 @@ export function Modal({
   onClose: () => void;
   children: ReactNode;
 }) {
+  useEscapeToClose(true, onClose);
   return (
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-brand-900/40 backdrop-blur-sm sm:items-center animate-fade-in"
@@ -317,7 +335,7 @@ export function Modal({
       >
         <div className="mb-4 flex items-start justify-between">
           <h2 className="font-display text-xl font-bold text-brand-900">{title}</h2>
-          <button type="button" className="btn-ghost -mr-2 text-slate-400" onClick={onClose} aria-label="Fermer">
+          <button type="button" className="btn-ghost -mr-2 text-slate-500" onClick={onClose} aria-label="Fermer">
             ✕
           </button>
         </div>

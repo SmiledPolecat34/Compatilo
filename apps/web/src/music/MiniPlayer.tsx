@@ -53,7 +53,7 @@ export default function MiniPlayer() {
                 <div className="min-w-0">
                   <p className="truncate font-semibold text-slate-800">{player.currentTrack.title}</p>
                   {player.currentTrack.artist && (
-                    <p className="truncate text-xs text-slate-400">{player.currentTrack.artist}</p>
+                    <p className="truncate text-xs text-slate-500">{player.currentTrack.artist}</p>
                   )}
                 </div>
               </div>
@@ -68,7 +68,7 @@ export default function MiniPlayer() {
                   className="w-full accent-brand-600"
                   aria-label="Progression de la piste"
                 />
-                <div className="flex justify-between text-xs text-slate-400">
+                <div className="flex justify-between text-xs text-slate-500">
                   <span>{formatTime(player.currentTime)}</span>
                   <span>{formatTime(player.duration)}</span>
                 </div>
@@ -80,7 +80,7 @@ export default function MiniPlayer() {
                   onClick={player.toggleShuffle}
                   aria-pressed={player.shuffle}
                   aria-label="Lecture aléatoire"
-                  className={`btn-ghost ${player.shuffle ? 'text-brand-700' : 'text-slate-400'}`}
+                  className={`btn-ghost ${player.shuffle ? 'text-brand-700' : 'text-slate-500'}`}
                 >
                   🔀
                 </button>
@@ -102,7 +102,7 @@ export default function MiniPlayer() {
                   type="button"
                   onClick={player.cycleRepeat}
                   aria-label="Répétition"
-                  className={`btn-ghost ${player.repeatMode !== 'off' ? 'text-brand-700' : 'text-slate-400'}`}
+                  className={`btn-ghost ${player.repeatMode !== 'off' ? 'text-brand-700' : 'text-slate-500'}`}
                 >
                   {player.repeatMode === 'one' ? '🔂' : '🔁'}
                 </button>
@@ -150,7 +150,7 @@ export default function MiniPlayer() {
               )}
             </>
           ) : (
-            <p className="py-2 text-center text-sm text-slate-400">Aucune playlist disponible.</p>
+            <p className="py-2 text-center text-sm text-slate-500">Aucune playlist disponible.</p>
           )}
       </div>
 

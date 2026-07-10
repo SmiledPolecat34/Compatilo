@@ -172,7 +172,7 @@ export default function ReportView({
         {/* Réponses communes */}
         <section>
           <SectionTitle>
-            Vos points communs <span className="text-slate-400">({commons.length})</span>
+            Vos points communs <span className="text-slate-500">({commons.length})</span>
           </SectionTitle>
           <AnswerList items={commons.slice(0, 12)} a={a.firstName} b={b.firstName} />
         </section>
@@ -180,7 +180,7 @@ export default function ReportView({
         {/* Différences */}
         <section>
           <SectionTitle>
-            Vos différences <span className="text-slate-400">({differences.length})</span>
+            Vos différences <span className="text-slate-500">({differences.length})</span>
           </SectionTitle>
           {differences.length === 0 ? (
             <p className="text-slate-500">Aucune vraie différence — impressionnant ! 🎉</p>
@@ -220,7 +220,7 @@ export default function ReportView({
                           </span>
                         )}
                         {r.kind && (
-                          <span className="flex items-center gap-1.5 text-xs text-slate-400">
+                          <span className="flex items-center gap-1.5 text-xs text-slate-500">
                             <span className={`h-2 w-2 rounded-full ${KIND_META[r.kind].dot}`} />
                             {KIND_META[r.kind].label}
                           </span>
@@ -253,7 +253,7 @@ export default function ReportView({
                   ) : isMe && signatureSlot ? (
                     signatureSlot
                   ) : (
-                    <p className="flex h-24 items-center justify-center text-sm text-slate-400">
+                    <p className="flex h-24 items-center justify-center text-sm text-slate-500">
                       En attente de signature…
                     </p>
                   )}
@@ -266,7 +266,7 @@ export default function ReportView({
         {/* Pied de rapport */}
         <footer className="flex flex-col items-center gap-3 border-t border-brand-100 pt-8 text-center">
           {qrUrl && <img src={qrUrl} alt="QR code Compatilo" width={110} height={110} />}
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-slate-500">
             Rapport {code} — généré par Compatilo le{' '}
             {date.toLocaleDateString('fr-FR')} à{' '}
             {date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
@@ -297,7 +297,7 @@ function AnswerList({
       {items.map((r) => (
         <div key={r.questionId} className="rounded-2xl border border-brand-100 bg-white px-4 py-3">
           <p className="text-sm font-medium text-slate-700">{r.prompt}</p>
-          <p className="mt-1 text-xs text-slate-400">
+          <p className="mt-1 text-xs text-slate-500">
             {r.pageTitle} — {a} :{' '}
             <strong>{r.valueA ? VALUE_LABEL[r.valueA] : '—'}</strong> · {b} :{' '}
             <strong>{r.valueB ? VALUE_LABEL[r.valueB] : '—'}</strong>

@@ -4,6 +4,7 @@ import { api, ApiError, tokens } from '../../api/client';
 import type { QuestionnairePayload, TrileanValue } from '../../types';
 import Logo from '../../components/Logo';
 import { getQuestionComponent } from '../../components/questions/registry';
+import { PageSpinner } from '../../components/Skeleton';
 
 type Phase = 'loading' | 'intro' | 'quiz' | 'error';
 
@@ -112,7 +113,7 @@ export default function SessionFlow() {
   }
 
   if (phase === 'loading') {
-    return <CenteredMessage>Chargement…</CenteredMessage>;
+    return <PageSpinner />;
   }
   if (phase === 'error' || !data) {
     return <CenteredMessage>{error || 'Une erreur est survenue.'}</CenteredMessage>;
@@ -245,7 +246,7 @@ export default function SessionFlow() {
           >
             ← Retour
           </button>
-          <div className="flex-1 text-center text-sm text-slate-400">
+          <div className="flex-1 text-center text-sm text-slate-500">
             Page {pageIndex + 1}/{data.questionnaire.pages.length}
           </div>
           {data.readOnly ? (
@@ -275,7 +276,7 @@ export default function SessionFlow() {
           )}
         </div>
         {!data.readOnly && isLastPage && (!allAnswered || !favoritesOk) && (
-          <p className="mx-auto mt-2 max-w-2xl text-center text-xs text-slate-400">
+          <p className="mx-auto mt-2 max-w-2xl text-center text-xs text-slate-500">
             {!allAnswered
               ? `Il reste ${allQuestions.length - answeredCount} question(s) sans réponse.`
               : `Sélectionne au moins ${data.favoritesRule.min} favoris (⭐) pour terminer.`}

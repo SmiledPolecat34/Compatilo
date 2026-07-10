@@ -11,6 +11,8 @@ import QuestionnaireEditor from './pages/admin/QuestionnaireEditor';
 import SecurityPage from './pages/admin/SecurityPage';
 import MusicPage from './pages/admin/MusicPage';
 import StatsPage from './pages/admin/StatsPage';
+import StatusPage from './pages/StatusPage';
+import ErrorPage from './components/ErrorPage';
 import { PlayerProvider } from './music/PlayerContext';
 import MiniPlayer from './music/MiniPlayer';
 
@@ -23,6 +25,7 @@ export default function App() {
         <Route path="/join/:pin" element={<Home />} />
         <Route path="/session" element={<SessionFlow />} />
         <Route path="/session/report" element={<ReportPage />} />
+        <Route path="/status" element={<StatusPage />} />
 
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin" element={<AdminLayout />}>
@@ -35,7 +38,9 @@ export default function App() {
           <Route path="stats" element={<StatsPage />} />
         </Route>
 
-        <Route path="*" element={<Home />} />
+        <Route path="/403" element={<ErrorPage variant="403" />} />
+        <Route path="/500" element={<ErrorPage variant="500" />} />
+        <Route path="*" element={<ErrorPage variant="404" />} />
       </Routes>
     </PlayerProvider>
   );

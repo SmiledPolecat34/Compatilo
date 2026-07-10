@@ -3,17 +3,22 @@ import { Link } from 'react-router-dom';
 import { api } from '../../api/client';
 import type { QuestionnaireListItem } from '../../types';
 import { Modal } from './Dashboard';
+import { SkeletonCards } from '../../components/Skeleton';
+import { useToast } from '../../components/ToastProvider';
 
 export default function QuestionnairesPage() {
-  const [items, setItems] = useState<QuestionnaireListItem[]>([]);
+  const toast = useToast();
+  const [items, setItems] = useState<QuestionnaireListItem[] | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [error, setError] = useState('');
 
   const load = useCallback(() => {
-    api<QuestionnaireListItem[]>('/api/admin/questionnaires', { auth: 'admin' }).then(setItems);
-  }, []);
+    api<QuestionnaireListItem[]>('/api/admin/questionnaires', { auth: 'admin' })
+      .then(setItems)
+      .catch((err) => toast.error(err instanceof Error ? err.message : 'Chargement impossible.'));
+  }, [toast]);
 
   useEffect(load, [load]);
 
@@ -27,19 +32,21 @@ export default function QuestionnairesPage() {
       setShowCreate(false);
       setTitle('');
       setDescription('');
+      toast.success('Questionnaire créé.');
       load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur');
     }
   }
 
-  async function action(path: string) {
+  async function action(path: string, successMessage: string) {
     setError('');
     try {
       await api(path, { method: 'POST', auth: 'admin' });
+      toast.success(successMessage);
       load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur');
+      toast.error(err instanceof Error ? err.message : 'Erreur');
     }
   }
 
@@ -54,6 +61,9 @@ export default function QuestionnairesPage() {
 
       {error && <p className="mb-4 text-sm font-medium text-rose-600">{error}</p>}
 
+      {items === null ? (
+        <SkeletonCards count={3} />
+      ) : (
       <div className="space-y-4">
         {items.map((q) => {
           const draft = q.versions.find((v) => v.status === 'DRAFT');
@@ -86,7 +96,7 @@ export default function QuestionnairesPage() {
                     <button
                       type="button"
                       className="btn-secondary"
-                      onClick={() => action(`/api/admin/questionnaires/${q.id}/draft`)}
+                      onClick={() => action(`/api/admin/questionnaires/${q.id}/draft`, 'Brouillon créé.')}
                     >
                       Nouvelle version
                     </button>
@@ -94,7 +104,7 @@ export default function QuestionnairesPage() {
                   <button
                     type="button"
                     className="btn-ghost"
-                    onClick={() => action(`/api/admin/questionnaires/${q.id}/duplicate`)}
+                    onClick={() => action(`/api/admin/questionnaires/${q.id}/duplicate`, 'Questionnaire dupliqué.')}
                   >
                     Dupliquer
                   </button>
@@ -104,6 +114,7 @@ export default function QuestionnairesPage() {
           );
         })}
       </div>
+      )}
 
       {showCreate && (
         <Modal title="Nouveau questionnaire" onClose={() => setShowCreate(false)}>

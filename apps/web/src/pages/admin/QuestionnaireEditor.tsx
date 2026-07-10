@@ -17,6 +17,8 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { api } from '../../api/client';
 import type { EditorPage, EditorQuestion } from '../../types';
+import { Skeleton } from '../../components/Skeleton';
+import { useToast } from '../../components/ToastProvider';
 
 interface VersionPayload {
   id: string;
@@ -46,6 +48,7 @@ const nextLocalId = () => `local-${++localCounter}`;
 export default function QuestionnaireEditor() {
   const { versionId } = useParams();
   const navigate = useNavigate();
+  const toast = useToast();
   const [meta, setMeta] = useState<{ title: string; version: number; status: string } | null>(null);
   const [pages, setPages] = useState<EditorPage[]>([]);
   const [selectedPage, setSelectedPage] = useState(0);
@@ -56,8 +59,8 @@ export default function QuestionnaireEditor() {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   useEffect(() => {
-    api<VersionPayload>(`/api/admin/questionnaires/versions/${versionId}`, { auth: 'admin' }).then(
-      (v) => {
+    api<VersionPayload>(`/api/admin/questionnaires/versions/${versionId}`, { auth: 'admin' })
+      .then((v) => {
         setMeta({ title: v.questionnaire.title, version: v.version, status: v.status });
         setPages(
           v.pages.map((p) => ({
@@ -78,9 +81,9 @@ export default function QuestionnaireEditor() {
             })),
           })),
         );
-      },
-    );
-  }, [versionId]);
+      })
+      .catch((err) => toast.error(err instanceof Error ? err.message : 'Chargement impossible.'));
+  }, [versionId, toast]);
 
   // Sauvegarde automatique (débounce) de la structure complète
   const scheduleSave = useCallback(
@@ -205,15 +208,26 @@ export default function QuestionnaireEditor() {
         method: 'POST',
         auth: 'admin',
       });
+      toast.success('Version publiée.');
       navigate('/admin/questionnaires');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur');
+      toast.error(err instanceof Error ? err.message : 'Erreur');
     }
   }
 
   const questionIds = useMemo(() => page?.questions.map((q) => q.localId) ?? [], [page]);
 
-  if (!meta) return <div className="p-10 text-center text-slate-500">Chargement…</div>;
+  if (!meta) {
+    return (
+      <div className="animate-fade-up space-y-6">
+        <Skeleton className="h-8 w-64" />
+        <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
+          <Skeleton className="h-64 w-full" />
+          <Skeleton className="h-96 w-full" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="animate-fade-up">
@@ -225,7 +239,7 @@ export default function QuestionnaireEditor() {
           <h1 className="font-display text-2xl font-bold text-brand-900">
             {meta.title} — v{meta.version}
           </h1>
-          <p className="text-sm text-slate-400" aria-live="polite">
+          <p className="text-sm text-slate-500" aria-live="polite">
             {saveState === 'saved' && 'Brouillon enregistré ✓'}
             {saveState === 'dirty' && 'Modifications en attente…'}
             {saveState === 'saving' && 'Enregistrement…'}
@@ -240,7 +254,7 @@ export default function QuestionnaireEditor() {
       <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
         {/* Liste des pages */}
         <aside className="card h-fit p-4">
-          <h2 className="mb-3 px-2 text-sm font-bold uppercase tracking-wide text-slate-400">
+          <h2 className="mb-3 px-2 text-sm font-bold uppercase tracking-wide text-slate-500">
             Pages
           </h2>
           <ul className="space-y-1">

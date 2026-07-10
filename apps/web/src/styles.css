@@ -40,6 +40,42 @@
   }
 }
 
+/*
+ * Architecture de thème : chaque thème ne définit que ces variables de
+ * surface. Le fond de page, les cartes et le texte principal en
+ * dépendent ; ajouter un futur thème = un nouveau bloc [data-theme=...]
+ * ici, sans toucher un seul composant.
+ */
+:root,
+[data-theme='light'] {
+  --surface-1: #faf8ff;
+  --surface-2: #fdf6fb;
+  --surface-3: #f6f4ff;
+  --surface-card: rgb(255 255 255 / 85%);
+  --surface-border: rgb(255 255 255 / 70%);
+  --text-body: #241b35;
+}
+
+[data-theme='dark'] {
+  --surface-1: #171225;
+  --surface-2: #1d1730;
+  --surface-3: #15101f;
+  --surface-card: rgb(38 30 58 / 85%);
+  --surface-border: rgb(255 255 255 / 8%);
+  --text-body: #ede9f8;
+}
+
+/* Thème de démonstration — preuve que l'architecture accepte un troisième
+   thème sans changement de code applicatif. */
+[data-theme='custom'] {
+  --surface-1: #fff7ed;
+  --surface-2: #ffede0;
+  --surface-3: #fff3e6;
+  --surface-card: rgb(255 255 255 / 88%);
+  --surface-border: rgb(255 255 255 / 70%);
+  --text-body: #3a1f0f;
+}
+
 html {
   -webkit-text-size-adjust: 100%;
   scroll-behavior: smooth;
@@ -47,10 +83,11 @@ html {
 
 body {
   font-family: var(--font-sans);
-  background: linear-gradient(160deg, #faf8ff 0%, #fdf6fb 55%, #f6f4ff 100%);
+  background: linear-gradient(160deg, var(--surface-1) 0%, var(--surface-2) 55%, var(--surface-3) 100%);
   min-height: 100dvh;
-  color: #241b35;
+  color: var(--text-body);
   -webkit-font-smoothing: antialiased;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Boutons & champs — confort tactile iPhone */
@@ -62,13 +99,38 @@ textarea {
   touch-action: manipulation;
 }
 
+/* Focus clavier visible partout (souris/tactile non affectés) */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+  border-radius: 0.5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 input,
 textarea {
   font-size: 16px; /* évite le zoom automatique de Safari iOS */
 }
 
 .card {
-  @apply rounded-3xl bg-white/85 shadow-[0_8px_30px_rgba(88,52,160,0.08)] backdrop-blur border border-white/70;
+  @apply rounded-3xl shadow-[0_8px_30px_rgba(88,52,160,0.08)] backdrop-blur border;
+  background: var(--surface-card);
+  border-color: var(--surface-border);
 }
 
 .btn-primary {
@@ -84,7 +146,7 @@ textarea {
 }
 
 .input {
-  @apply w-full rounded-2xl border border-brand-200 bg-white px-4 py-3 outline-none transition focus:border-brand-400 focus:ring-4 focus:ring-brand-200/50 placeholder:text-slate-400;
+  @apply w-full rounded-2xl border border-brand-200 bg-white px-4 py-3 outline-none transition focus:border-brand-400 focus:ring-4 focus:ring-brand-200/50 placeholder:text-slate-500;
 }
 
 .label {

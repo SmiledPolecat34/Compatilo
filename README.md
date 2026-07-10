@@ -53,6 +53,8 @@ Un script E2E couvre tout le parcours (auth, sessions, PIN, réponses, favoris, 
 
 - **Frontend → Netlify** : configuration dans `netlify.toml`. Définir `VITE_API_URL` (URL Render).
 - **Backend → Render** : blueprint `render.yaml` (service web + PostgreSQL). Définir `WEB_ORIGIN`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` ; `JWT_SECRET` et `PIN_PEPPER` sont générés. Les migrations s'appliquent au démarrage, l'admin et le questionnaire par défaut sont créés automatiquement (bootstrap idempotent).
+- **Sauvegarde de la base** : stratégie et scripts documentés dans [`BACKUP.md`](BACKUP.md).
+- **Sécurité** : audit OWASP Top 10 documenté dans [`SECURITY.md`](SECURITY.md).
 
 ## Modèle de compatibilité
 
@@ -67,10 +69,26 @@ Un script E2E couvre tout le parcours (auth, sessions, PIN, réponses, favoris, 
 
 Score = (compatibles × 1 + partielles × 0,5) / questions comparées.
 
+## Thème clair / sombre
+
+`src/theme/ThemeProvider.tsx` gère trois thèmes (`light`, `dark`, `custom` — un thème de démonstration "Coucher de soleil"), persistés en `localStorage` et appliqués via `[data-theme]` + variables CSS (`styles.css`). Le sélecteur est visible dans l'en-tête admin. Seule la coquille de l'app (fond, cartes, focus) est pilotée par ces variables ; les couleurs de contenu (Tailwind `text-slate-*`, `bg-brand-*`, etc.) restent fixes pour l'instant — étendre chaque composant au thème sombre est un travail de finition volontairement laissé pour plus tard.
+
+## Monitoring & supervision
+
+- **Health check** : `GET /api/health` (et `/health`) renvoie `{ status, database, version, uptimeSeconds }` ; teste la connexion PostgreSQL à chaque appel. Page dédiée : `/status`.
+- **Logs serveur** : structurés via `pino` (JSON en production, lisible en développement), avec logs d'accès HTTP et erreurs API contextualisées (route, méthode, statut).
+- **Erreurs front** : `ErrorBoundary` + gestionnaires `window.onerror`/`unhandledrejection` envoient les erreurs à `POST /api/public/client-errors`, journalisées côté serveur (pas de stockage en base).
+
+## SEO & PWA
+
+`index.html` inclut Open Graph, Twitter Card, et un `manifest.webmanifest` (icône, couleurs, mode `standalone`). **Avant mise en production**, remplacer les URLs relatives `og:image`/`twitter:image` par l'URL absolue du domaine final. Sur iPhone, l'app est installable depuis Safari (« Sur l'écran d'accueil ») en plein écran ; iOS génère automatiquement un écran de démarrage à partir de l'icône et de la couleur de thème (pas d'images de splash dédiées par appareil).
+
 ## Évolutions prévues par l'architecture
 
-Nouveaux types de questions (registre frontend + `type`/`config` JSON en base), nouveaux questionnaires (multi-questionnaires natif), notifications temps réel (événements timeline déjà structurés), comparaison entre plusieurs rapports, thèmes (design tokens Tailwind v4 dans `styles.css`), nouveaux fournisseurs de musique (Spotify, Deezer, Apple Music, SoundCloud — pattern Provider déjà en place côté client et serveur).
+Nouveaux types de questions (registre frontend + `type`/`config` JSON en base), nouveaux questionnaires (multi-questionnaires natif), notifications temps réel (événements timeline déjà structurés), comparaison entre plusieurs rapports, thèmes supplémentaires (variables CSS déjà en place), nouveaux fournisseurs de musique (Spotify, Deezer, Apple Music, SoundCloud — pattern Provider déjà en place côté client et serveur).
 
-## Limitation connue
+## Limitations connues
 
-Le stockage des fichiers audio uploadés (`MUSIC_UPLOAD_DIR`) est local au disque du serveur. Sur le plan gratuit de Render, ce disque est **éphémère** (perdu au redéploiement). Pour la production, remplacer `LocalDiskStorage` (`apps/api/src/services/music/storage.ts`) par une implémentation S3/GCS respectant la même interface `StorageProvider` — aucun autre fichier n'a besoin de changer. Les pistes YouTube ne sont pas concernées (pas de fichier stocké).
+- Le stockage des fichiers audio uploadés (`MUSIC_UPLOAD_DIR`) est local au disque du serveur. Sur le plan gratuit de Render, ce disque est **éphémère** (perdu au redéploiement). Pour la production, remplacer `LocalDiskStorage` (`apps/api/src/services/music/storage.ts`) par une implémentation S3/GCS respectant la même interface `StorageProvider` — aucun autre fichier n'a besoin de changer. Les pistes YouTube ne sont pas concernées (pas de fichier stocké).
+- Le thème sombre ne couvre que la coquille de l'application (voir ci-dessus).
+- Pas de service worker : l'app est installable (PWA « ready ») mais ne fonctionne pas hors ligne.

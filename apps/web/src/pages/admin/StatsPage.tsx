@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api/client';
+import { Skeleton } from '../../components/Skeleton';
+import { useToast } from '../../components/ToastProvider';
 
 interface Stats {
   sessions: { total: number; active: number; completed: number; archived: number };
@@ -10,13 +12,27 @@ interface Stats {
 }
 
 export default function StatsPage() {
+  const toast = useToast();
   const [stats, setStats] = useState<Stats | null>(null);
 
   useEffect(() => {
-    api<Stats>('/api/admin/stats', { auth: 'admin' }).then(setStats);
-  }, []);
+    api<Stats>('/api/admin/stats', { auth: 'admin' })
+      .then(setStats)
+      .catch((err) => toast.error(err instanceof Error ? err.message : 'Chargement impossible.'));
+  }, [toast]);
 
-  if (!stats) return <div className="p-10 text-center text-slate-500">Chargement…</div>;
+  if (!stats) {
+    return (
+      <div className="animate-fade-up">
+        <h1 className="mb-6 font-display text-3xl font-bold text-brand-900">Statistiques</h1>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <Skeleton key={i} className="h-24 w-full" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   const cards: { label: string; value: string | number; hint?: string }[] = [
     { label: 'Sessions créées', value: stats.sessions.total },
@@ -41,7 +57,7 @@ export default function StatsPage() {
           <div key={c.label} className="card p-5">
             <p className="text-sm font-medium text-slate-500">{c.label}</p>
             <p className="mt-1 font-display text-3xl font-bold text-brand-900">{c.value}</p>
-            {c.hint && <p className="mt-1 text-xs text-slate-400">{c.hint}</p>}
+            {c.hint && <p className="mt-1 text-xs text-slate-500">{c.hint}</p>}
           </div>
         ))}
       </div>

@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, tokens } from '../api/client';
 import type { LoginChallenge, LoginSuccess } from '../types';
+import { useEscapeToClose } from '../hooks/useEscapeToClose';
 
 type Step = 'password' | '2fa';
 
@@ -28,6 +29,8 @@ export default function AdminLoginModal({ open, onClose }: { open: boolean; onCl
       setInfo('');
     }
   }, [open]);
+
+  useEscapeToClose(open, onClose);
 
   if (!open) return null;
 
@@ -68,7 +71,7 @@ export default function AdminLoginModal({ open, onClose }: { open: boolean; onCl
     try {
       const result = await api<LoginSuccess>('/api/admin/auth/verify-2fa', {
         method: 'POST',
-        body: { pendingToken, code, rememberDevice },
+        body: { pendingToken, code, rememberDevice: method === 'EMAIL_OTP' && rememberDevice },
       });
       tokens.set('admin', result.token);
       onClose();
@@ -109,7 +112,7 @@ export default function AdminLoginModal({ open, onClose }: { open: boolean; onCl
           </h2>
           <button
             type="button"
-            className="btn-ghost -mr-2 -mt-1 text-slate-400"
+            className="btn-ghost -mr-2 -mt-1 text-slate-500"
             onClick={onClose}
             aria-label="Fermer"
           >
@@ -172,7 +175,8 @@ export default function AdminLoginModal({ open, onClose }: { open: boolean; onCl
                 required
               />
             </div>
-            <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600">
+            {method === 'EMAIL_OTP' && (
+              <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600">
               <input
                 type="checkbox"
                 className="h-4 w-4 accent-brand-600"
@@ -180,7 +184,8 @@ export default function AdminLoginModal({ open, onClose }: { open: boolean; onCl
                 onChange={(e) => setRememberDevice(e.target.checked)}
               />
               Mémoriser cet appareil
-            </label>
+              </label>
+            )}
             {error && <p className="text-sm font-medium text-rose-600">{error}</p>}
             <button
               type="submit"
@@ -192,7 +197,7 @@ export default function AdminLoginModal({ open, onClose }: { open: boolean; onCl
             <div className="flex items-center justify-between text-sm">
               <button
                 type="button"
-                className="btn-ghost text-slate-400"
+                className="btn-ghost text-slate-500"
                 onClick={() => setStep('password')}
               >
                 ← Retour

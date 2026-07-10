@@ -55,6 +55,15 @@ function trustedDeviceCookieOptions() {
   };
 }
 
+function clearTrustedDeviceCookie(res: import('express').Response) {
+  res.clearCookie(TRUSTED_DEVICE_COOKIE, {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? ('none' as const) : ('lax' as const),
+    path: '/api/admin/auth',
+  });
+}
+
 function activeMethod(admin: { twoFactorMethod: string; totpEnabled: boolean }) {
   return admin.totpEnabled ? 'TOTP' : admin.twoFactorMethod === 'TOTP' ? 'TOTP' : 'EMAIL_OTP';
 }
@@ -90,7 +99,9 @@ adminAuthRouter.post('/login', loginLimiter, validateBody(loginSchema), async (r
     const ok = admin ? await verifyPassword(password, admin.passwordHash) : false;
     if (!admin || !ok) throw unauthorized('Identifiants incorrects.');
 
-    if (await isTrustedDevice(req, admin.id)) {
+    const method = activeMethod(admin);
+
+    if (method !== 'TOTP' && (await isTrustedDevice(req, admin.id))) {
       const session = issueAdminSession(admin.id, admin.email, admin.tokenVersion);
       res.json({ ...session, twoFactorSkipped: true });
       return;
@@ -100,7 +111,6 @@ adminAuthRouter.post('/login', loginLimiter, validateBody(loginSchema), async (r
       throw tooMany('Trop de tentatives. Réessaie dans quelques minutes.');
     }
 
-    const method = activeMethod(admin);
     const pendingToken = signToken({ kind: 'admin_pending', adminId: admin.id }, '10m');
 
     if (method === 'EMAIL_OTP') {
@@ -179,7 +189,7 @@ adminAuthRouter.post('/verify-2fa', otpLimiter, validateBody(verifySchema), asyn
 
     const session = issueAdminSession(admin.id, admin.email, admin.tokenVersion);
 
-    if (rememberDevice) {
+    if (rememberDevice && method !== 'TOTP') {
       const deviceToken = generateDeviceToken();
       await prisma.trustedDevice.create({
         data: {
@@ -254,6 +264,7 @@ adminAuthRouter.post('/revoke-all', requireAdmin, async (req, res, next) => {
       data: { tokenVersion: { increment: 1 } },
     });
     await prisma.trustedDevice.deleteMany({ where: { adminId: req.adminId! } });
+    clearTrustedDeviceCookie(res);
     res.json({ ok: true });
   } catch (err) {
     next(err);
@@ -311,6 +322,8 @@ adminAuthRouter.post(
         where: { id: admin.id },
         data: { totpEnabled: true, twoFactorMethod: 'TOTP' },
       });
+      await prisma.trustedDevice.deleteMany({ where: { adminId: admin.id } });
+      clearTrustedDeviceCookie(res);
       res.json({ ok: true });
     } catch (err) {
       next(err);

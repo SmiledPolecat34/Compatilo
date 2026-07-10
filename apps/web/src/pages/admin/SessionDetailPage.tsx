@@ -4,6 +4,8 @@ import { api } from '../../api/client';
 import type { IdentityDisplayMode, PlaylistSummary, SessionDetail, TimelineEvent } from '../../types';
 import ReportView from '../../components/report/ReportView';
 import SessionStatusBadge from '../../components/SessionStatusBadge';
+import { Skeleton } from '../../components/Skeleton';
+import { useToast } from '../../components/ToastProvider';
 
 const IDENTITY_LABELS: Record<IdentityDisplayMode, string> = {
   FIRST_NAME: 'Prénom',
@@ -32,6 +34,7 @@ const EVENT_ICONS: Record<string, string> = {
 export default function SessionDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const toast = useToast();
   const [session, setSession] = useState<SessionDetail | null>(null);
   const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
   const [playlists, setPlaylists] = useState<PlaylistSummary[]>([]);
@@ -42,12 +45,14 @@ export default function SessionDetailPage() {
 
   const load = useCallback(() => {
     if (!id) return;
-    api<SessionDetail>(`/api/admin/sessions/${id}`, { auth: 'admin' }).then((s) => {
-      setSession(s);
-      setNotes(s.privateNotes ?? '');
-    });
+    api<SessionDetail>(`/api/admin/sessions/${id}`, { auth: 'admin' })
+      .then((s) => {
+        setSession(s);
+        setNotes(s.privateNotes ?? '');
+      })
+      .catch((err) => toast.error(err instanceof Error ? err.message : 'Chargement impossible.'));
     api<TimelineEvent[]>(`/api/admin/sessions/${id}/timeline`, { auth: 'admin' }).then(setTimeline);
-  }, [id]);
+  }, [id, toast]);
 
   useEffect(load, [load]);
   useEffect(() => {
@@ -59,47 +64,70 @@ export default function SessionDetailPage() {
     setNotesSaved(false);
     clearTimeout(notesTimer.current);
     notesTimer.current = setTimeout(async () => {
-      await api(`/api/admin/sessions/${id}`, {
-        method: 'PATCH',
-        body: { privateNotes: value || null },
-        auth: 'admin',
-      });
-      setNotesSaved(true);
+      try {
+        await api(`/api/admin/sessions/${id}`, {
+          method: 'PATCH',
+          body: { privateNotes: value || null },
+          auth: 'admin',
+        });
+        setNotesSaved(true);
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Enregistrement des notes impossible.');
+      }
     }, 600);
   }
 
   async function toggleAccess() {
     if (!session) return;
-    await api(`/api/admin/sessions/${id}`, {
-      method: 'PATCH',
-      body: { reportAccessEnabled: !session.reportAccessEnabled },
-      auth: 'admin',
-    });
-    load();
+    try {
+      await api(`/api/admin/sessions/${id}`, {
+        method: 'PATCH',
+        body: { reportAccessEnabled: !session.reportAccessEnabled },
+        auth: 'admin',
+      });
+      toast.success(session.reportAccessEnabled ? 'Accès au rapport désactivé.' : 'Accès au rapport activé.');
+      load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur');
+    }
   }
 
   async function updateIdentityDisplay(mode: IdentityDisplayMode) {
-    await api(`/api/admin/sessions/${id}`, {
-      method: 'PATCH',
-      body: { identityDisplay: mode },
-      auth: 'admin',
-    });
-    load();
+    try {
+      await api(`/api/admin/sessions/${id}`, {
+        method: 'PATCH',
+        body: { identityDisplay: mode },
+        auth: 'admin',
+      });
+      toast.success('Visibilité de l’identité mise à jour.');
+      load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur');
+    }
   }
 
   async function updatePlaylist(newPlaylistId: string) {
-    await api(`/api/admin/sessions/${id}`, {
-      method: 'PATCH',
-      body: { playlistId: newPlaylistId || null },
-      auth: 'admin',
-    });
-    load();
+    try {
+      await api(`/api/admin/sessions/${id}`, {
+        method: 'PATCH',
+        body: { playlistId: newPlaylistId || null },
+        auth: 'admin',
+      });
+      toast.success('Playlist mise à jour.');
+      load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur');
+    }
   }
 
   async function remove() {
     if (!window.confirm('Supprimer définitivement cette session et toutes ses données ?')) return;
-    await api(`/api/admin/sessions/${id}`, { method: 'DELETE', auth: 'admin' });
-    navigate('/admin');
+    try {
+      await api(`/api/admin/sessions/${id}`, { method: 'DELETE', auth: 'admin' });
+      navigate('/admin');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Suppression impossible.');
+    }
   }
 
   async function closeSession() {
@@ -109,18 +137,42 @@ export default function SessionDetailPage() {
       )
     )
       return;
-    await api(`/api/admin/sessions/${id}/close`, { method: 'POST', auth: 'admin' });
-    load();
+    try {
+      await api(`/api/admin/sessions/${id}/close`, { method: 'POST', auth: 'admin' });
+      toast.success('Session fermée.');
+      load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur');
+    }
   }
 
   async function reopenSession() {
     if (!window.confirm('Rouvrir cette session ?')) return;
-    await api(`/api/admin/sessions/${id}/reopen`, { method: 'POST', auth: 'admin' });
-    load();
+    try {
+      await api(`/api/admin/sessions/${id}/reopen`, { method: 'POST', auth: 'admin' });
+      toast.success('Session rouverte.');
+      load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur');
+    }
   }
 
   if (!session) {
-    return <div className="p-10 text-center text-slate-500">Chargement…</div>;
+    return (
+      <div className="animate-fade-up space-y-6">
+        <Skeleton className="h-8 w-64" />
+        <div className="grid gap-6 lg:grid-cols-3">
+          <div className="space-y-6 lg:col-span-2">
+            <Skeleton className="h-48 w-full" />
+            <Skeleton className="h-32 w-full" />
+          </div>
+          <div className="space-y-6">
+            <Skeleton className="h-40 w-full" />
+            <Skeleton className="h-40 w-full" />
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -138,7 +190,7 @@ export default function SessionDetailPage() {
             </h1>
             <SessionStatusBadge status={session.status} />
           </div>
-          <p className="mt-1 text-sm text-slate-400">
+          <p className="mt-1 text-sm text-slate-500">
             {session.questionnaire} · créée le{' '}
             {new Date(session.createdAt).toLocaleString('fr-FR')}
             {session.expiresAt &&
@@ -184,7 +236,7 @@ export default function SessionDetailPage() {
                 {session.participants.map((p) => (
                   <div key={p.id} className="rounded-2xl border border-brand-100 p-4">
                     <div className="font-semibold text-brand-900">
-                      {p.firstName} {p.nickname && <span className="text-slate-400">« {p.nickname} »</span>}
+                      {p.firstName} {p.nickname && <span className="text-slate-500">« {p.nickname} »</span>}
                     </div>
                     <div className="mt-2 space-y-1 text-sm text-slate-500">
                       <p>
@@ -196,7 +248,7 @@ export default function SessionDetailPage() {
                         <p>
                           📍 {p.city ?? 'Ville inconnue'}
                           {p.latitude != null && p.longitude != null && (
-                            <span className="text-xs text-slate-400">
+                            <span className="text-xs text-slate-500">
                               {' '}
                               ({p.latitude.toFixed(4)}, {p.longitude.toFixed(4)})
                             </span>
@@ -299,7 +351,7 @@ export default function SessionDetailPage() {
           <section className="card p-6">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="font-display text-lg font-bold text-brand-900">Notes privées</h2>
-              <span className="text-xs text-slate-400">{notesSaved ? 'Enregistré ✓' : '…'}</span>
+              <span className="text-xs text-slate-500">{notesSaved ? 'Enregistré ✓' : '…'}</span>
             </div>
             <textarea
               className="input min-h-32 resize-y"
@@ -319,7 +371,7 @@ export default function SessionDetailPage() {
                   <span aria-hidden>{EVENT_ICONS[e.type] ?? '•'}</span>
                   <div>
                     <p className="text-slate-700">{e.message}</p>
-                    <p className="text-xs text-slate-400">
+                    <p className="text-xs text-slate-500">
                       {new Date(e.createdAt).toLocaleString('fr-FR')}
                     </p>
                   </div>

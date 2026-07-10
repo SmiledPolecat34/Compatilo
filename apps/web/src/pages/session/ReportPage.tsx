@@ -5,11 +5,14 @@ import type { ReportPayload } from '../../types';
 import ReportView from '../../components/report/ReportView';
 import SignaturePad from '../../components/report/SignaturePad';
 import Logo from '../../components/Logo';
+import ErrorPage from '../../components/ErrorPage';
+import { PageSpinner } from '../../components/Skeleton';
 
 export default function ReportPage() {
   const navigate = useNavigate();
   const [payload, setPayload] = useState<ReportPayload | null>(null);
   const [error, setError] = useState('');
+  const [errorStatus, setErrorStatus] = useState<number | null>(null);
 
   const load = useCallback(() => {
     api<ReportPayload>('/api/public/me/report', { auth: 'participant' })
@@ -20,6 +23,7 @@ export default function ReportPage() {
           navigate('/');
         } else {
           setError(err instanceof Error ? err.message : 'Erreur');
+          setErrorStatus(err instanceof ApiError ? err.status : null);
         }
       });
   }, [navigate]);
@@ -42,18 +46,20 @@ export default function ReportPage() {
 
   if (error) {
     return (
-      <div className="flex min-h-dvh flex-col items-center justify-center gap-4 px-6 text-center">
-        <Logo size={40} />
-        <p className="text-slate-600">{error}</p>
-        <button type="button" className="btn-secondary" onClick={() => navigate('/')}>
-          Retour à l'accueil
-        </button>
-      </div>
+      <ErrorPage
+        variant={errorStatus === 403 ? '403' : '500'}
+        detail={error}
+        onRetry={() => {
+          setError('');
+          setErrorStatus(null);
+          load();
+        }}
+      />
     );
   }
 
   if (!payload) {
-    return <div className="flex min-h-dvh items-center justify-center text-slate-500">Chargement…</div>;
+    return <PageSpinner />;
   }
 
   if (!payload.ready) {
@@ -70,7 +76,7 @@ export default function ReportPage() {
               ? `On attend ${payload.waitingFor.join(' et ')} pour générer votre rapport.`
               : "On attend l'autre participant pour générer votre rapport."}
           </p>
-          <p className="mt-2 text-sm text-slate-400">
+          <p className="mt-2 text-sm text-slate-500">
             Cette page se mettra à jour automatiquement.
           </p>
         </div>

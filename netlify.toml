@@ -1,0 +1,21 @@
+# Déploiement du frontend Compatilo sur Netlify
+[build]
+  command = "npm ci && npm run build --workspace=apps/web"
+  publish = "apps/web/dist"
+
+# Variables à définir dans l'interface Netlify :
+#   VITE_API_URL = https://<ton-service>.onrender.com
+
+# SPA : toutes les routes servent index.html
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "geolocation=(self)"

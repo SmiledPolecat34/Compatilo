@@ -1,5 +1,13 @@
 import { z } from 'zod';
 
+// Charge .env en développement ; en production (Render), les variables
+// sont fournies par la plateforme et le fichier n'existe pas.
+try {
+  process.loadEnvFile();
+} catch {
+  /* pas de fichier .env */
+}
+
 const schema = z.object({
   DATABASE_URL: z.string().min(1),
   JWT_SECRET: z.string().min(16),

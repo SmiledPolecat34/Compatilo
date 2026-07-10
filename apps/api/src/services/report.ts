@@ -1,3 +1,4 @@
+import type { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import { generateReportCode } from '../lib/crypto.js';
 import { logEvent } from './timeline.js';
@@ -120,7 +121,12 @@ export async function generateReport(sessionId: string) {
   };
 
   const report = await prisma.report.create({
-    data: { sessionId, code: generateReportCode(), score, data },
+    data: {
+      sessionId,
+      code: generateReportCode(),
+      score,
+      data: data as unknown as Prisma.InputJsonValue,
+    },
   });
   await prisma.session.update({ where: { id: sessionId }, data: { status: 'COMPLETED' } });
   await logEvent(sessionId, 'report.generated', `Rapport ${report.code} généré (score ${score}%)`, {

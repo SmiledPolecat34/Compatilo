@@ -1,0 +1,200 @@
+// Compatilo — schéma de données
+// PostgreSQL + Prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────── Admin ───────────────────────────────
+
+model Admin {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+}
+
+// ──────────────────────────── Questionnaire ──────────────────────────
+// Un questionnaire possède des versions. Seule une version DRAFT est
+// éditable ; publier fige la version. Les sessions pointent vers une
+// version publiée, ce qui garantit l'immutabilité des rapports.
+
+enum VersionStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model Questionnaire {
+  id          String                 @id @default(cuid())
+  title       String
+  description String?
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+  versions    QuestionnaireVersion[]
+}
+
+model QuestionnaireVersion {
+  id              String        @id @default(cuid())
+  questionnaireId String
+  questionnaire   Questionnaire @relation(fields: [questionnaireId], references: [id], onDelete: Cascade)
+  version         Int
+  status          VersionStatus @default(DRAFT)
+  publishedAt     DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  pages           Page[]
+  sessions        Session[]
+
+  @@unique([questionnaireId, version])
+}
+
+model Page {
+  id          String               @id @default(cuid())
+  versionId   String
+  version     QuestionnaireVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  position    Int
+  isActive    Boolean              @default(true)
+  questions   Question[]
+
+  @@index([versionId, position])
+}
+
+// `type` + `config` (JSON) rendent l'ajout de nouveaux types de questions
+// possible sans migration : le rendu est piloté par un registre côté front.
+model Question {
+  id        String   @id @default(cuid())
+  pageId    String
+  page      Page     @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  type      String   @default("trilean") // trilean = Oui / Possible / Non
+  prompt    String
+  helpText  String?
+  position  Int
+  isActive  Boolean  @default(true)
+  required  Boolean  @default(true)
+  config    Json     @default("{}")
+  answers   Answer[]
+
+  @@index([pageId, position])
+}
+
+// ─────────────────────────────── Session ─────────────────────────────
+
+enum SessionStatus {
+  ACTIVE
+  COMPLETED
+  ARCHIVED
+}
+
+model Session {
+  id                  String               @id @default(cuid())
+  publicId            String               @unique // identifiant non prévisible (nanoid)
+  label               String?
+  pinHash             String // bcrypt
+  pinLookup           String               @unique // HMAC-SHA256(pin, pepper) pour retrouver la session
+  status              SessionStatus        @default(ACTIVE)
+  versionId           String
+  version             QuestionnaireVersion @relation(fields: [versionId], references: [id])
+  expiresAt           DateTime?
+  reportAccessEnabled Boolean              @default(true)
+  privateNotes        String?
+  failedAttempts      Int                  @default(0)
+  lockedUntil         DateTime?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  participants        Participant[]
+  timeline            TimelineEvent[]
+  report              Report?
+}
+
+model Participant {
+  id              String      @id @default(cuid())
+  sessionId       String
+  session         Session     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  slot            Int // 1 ou 2
+  firstName       String
+  nickname        String?
+  locationConsent Boolean     @default(false)
+  city            String?
+  latitude        Float? // visibles uniquement par l'admin
+  longitude       Float?
+  joinedAt        DateTime    @default(now())
+  startedAt       DateTime?
+  completedAt     DateTime?
+  answers         Answer[]
+  favorites       Favorite[]
+  signatures      Signature[]
+
+  @@unique([sessionId, slot])
+}
+
+model Answer {
+  id            String      @id @default(cuid())
+  participantId String
+  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  questionId    String
+  question      Question    @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  value         Json
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@unique([participantId, questionId])
+}
+
+model Favorite {
+  id            String      @id @default(cuid())
+  participantId String
+  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  questionId    String
+  createdAt     DateTime    @default(now())
+
+  @@unique([participantId, questionId])
+}
+
+// ─────────────────────────────── Rapport ─────────────────────────────
+// `data` est un instantané complet (questions, réponses, comparaisons,
+// favoris, score) : le rapport reste stable même si le questionnaire évolue.
+
+model Report {
+  id          String      @id @default(cuid())
+  sessionId   String      @unique
+  session     Session     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  code        String      @unique // identité unique, ex. CMP-7F3K-92QX
+  score       Int
+  data        Json
+  generatedAt DateTime    @default(now())
+  signatures  Signature[]
+}
+
+model Signature {
+  id            String      @id @default(cuid())
+  reportId      String
+  report        Report      @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  participantId String
+  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  image         String // data URL PNG
+  signedAt      DateTime    @default(now())
+
+  @@unique([reportId, participantId])
+}
+
+// ─────────────────────────────── Timeline ────────────────────────────
+
+model TimelineEvent {
+  id        String   @id @default(cuid())
+  sessionId String
+  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  type      String // session.created, pin.generated, participant.joined, ...
+  message   String
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  @@index([sessionId, createdAt])
+}

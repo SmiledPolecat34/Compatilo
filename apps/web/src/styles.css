@@ -1,0 +1,106 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display: 'Fraunces', Georgia, serif;
+
+  --color-brand-50: #faf7ff;
+  --color-brand-100: #f1eaff;
+  --color-brand-200: #e2d4ff;
+  --color-brand-300: #c9adfc;
+  --color-brand-400: #ab7ef6;
+  --color-brand-500: #8f54ec;
+  --color-brand-600: #7a38da;
+  --color-brand-700: #6729b8;
+  --color-brand-800: #562496;
+  --color-brand-900: #481f79;
+
+  --color-rose-accent: #f45b8f;
+
+  --animate-fade-up: fade-up 0.5s ease both;
+  --animate-fade-in: fade-in 0.4s ease both;
+
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: linear-gradient(160deg, #faf8ff 0%, #fdf6fb 55%, #f6f4ff 100%);
+  min-height: 100dvh;
+  color: #241b35;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Boutons & champs — confort tactile iPhone */
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  touch-action: manipulation;
+}
+
+input,
+textarea {
+  font-size: 16px; /* évite le zoom automatique de Safari iOS */
+}
+
+.card {
+  @apply rounded-3xl bg-white/85 shadow-[0_8px_30px_rgba(88,52,160,0.08)] backdrop-blur border border-white/70;
+}
+
+.btn-primary {
+  @apply inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-brand-600 to-rose-accent px-6 py-3.5 font-semibold text-white shadow-lg shadow-brand-500/25 transition active:scale-[0.98] hover:opacity-95 disabled:opacity-40 disabled:pointer-events-none;
+}
+
+.btn-secondary {
+  @apply inline-flex items-center justify-center gap-2 rounded-2xl border border-brand-200 bg-white px-5 py-3 font-semibold text-brand-700 transition hover:bg-brand-50 active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none;
+}
+
+.btn-ghost {
+  @apply inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium text-brand-700 transition hover:bg-brand-100/60 active:scale-[0.98];
+}
+
+.input {
+  @apply w-full rounded-2xl border border-brand-200 bg-white px-4 py-3 outline-none transition focus:border-brand-400 focus:ring-4 focus:ring-brand-200/50 placeholder:text-slate-400;
+}
+
+.label {
+  @apply mb-1.5 block text-sm font-semibold text-slate-600;
+}
+
+/* Impression du rapport (export PDF natif) */
+@media print {
+  body {
+    background: white;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-page {
+    box-shadow: none !important;
+    border: none !important;
+  }
+}

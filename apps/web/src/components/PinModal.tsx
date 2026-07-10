@@ -137,7 +137,7 @@ export default function PinModal({
     >
       <div
         ref={dialogRef}
-        className="card w-full max-w-md rounded-b-none p-6 sm:rounded-3xl sm:p-8 animate-fade-up"
+        className="card w-full max-w-md rounded-b-none p-4 sm:rounded-lg sm:p-8 animate-fade-up"
         style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}
       >
         <div className="flex items-start justify-between">
@@ -155,7 +155,7 @@ export default function PinModal({
           <div className="mt-5">
             <p className="text-slate-500">Entre le code à 6 chiffres reçu dans ton invitation.</p>
             <input
-              className="input mt-4 text-center text-3xl font-bold tracking-[0.5em]"
+              className="input mt-4 text-center text-2xl font-bold tracking-[0.35em] sm:text-3xl sm:tracking-[0.5em]"
               inputMode="numeric"
               autoComplete="one-time-code"
               maxLength={6}
@@ -236,7 +236,7 @@ export default function PinModal({
                 maxLength={60}
               />
             </div>
-            <label className="flex cursor-pointer items-start gap-3 rounded-2xl bg-brand-50 p-4">
+            <label className="flex cursor-pointer items-start gap-3 rounded-lg bg-brand-50 p-4">
               <input
                 type="checkbox"
                 className="mt-1 h-5 w-5 accent-brand-600"

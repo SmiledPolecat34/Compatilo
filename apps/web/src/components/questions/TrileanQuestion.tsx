@@ -19,7 +19,7 @@ export default function TrileanQuestion({ question, value, onChange }: QuestionC
             role="radio"
             aria-checked={active}
             onClick={() => onChange(opt.value)}
-            className={`rounded-2xl border-2 px-3 py-3 font-semibold transition active:scale-[0.97] ${
+            className={`rounded-lg border-2 px-2 py-3 text-sm font-semibold transition active:scale-[0.97] sm:px-3 sm:text-base ${
               active
                 ? opt.selected
                 : 'border-brand-100 bg-white text-slate-500 hover:border-brand-200'

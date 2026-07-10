@@ -183,8 +183,8 @@ export default function MusicPage() {
 
   return (
     <div className="animate-fade-up">
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-display text-3xl font-bold text-brand-900">Musique</h1>
+      <div className="mb-5 grid gap-3 sm:mb-6 sm:flex sm:items-center sm:justify-between">
+        <h1 className="font-display text-2xl font-bold text-brand-900 sm:text-3xl">Musique</h1>
         {settings && (
           <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-slate-600">
             <input
@@ -199,13 +199,13 @@ export default function MusicPage() {
       </div>
 
       {playlists === null ? (
-        <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
+        <div className="grid gap-5 xl:grid-cols-[280px_minmax(0,1fr)]">
           <Skeleton className="h-64 w-full" />
           <Skeleton className="h-96 w-full" />
         </div>
       ) : (
-      <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
-        <aside className="card h-fit p-4">
+      <div className="grid gap-5 xl:grid-cols-[280px_minmax(0,1fr)]">
+        <aside className="card h-fit min-w-0 p-4">
           <h2 className="mb-3 px-2 text-sm font-bold uppercase tracking-wide text-slate-500">Playlists</h2>
           <ul className="space-y-1">
             {playlists.map((p) => (
@@ -213,7 +213,7 @@ export default function MusicPage() {
                 <button
                   type="button"
                   onClick={() => setSelectedId(p.id)}
-                  className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm font-medium transition ${
+                  className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm font-medium transition ${
                     p.id === selectedId ? 'bg-brand-600 text-white' : 'text-slate-600 hover:bg-brand-50'
                   }`}
                 >
@@ -226,7 +226,7 @@ export default function MusicPage() {
               </li>
             ))}
           </ul>
-          <div className="mt-3 flex gap-2">
+          <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] xl:grid-cols-[minmax(0,1fr)_auto]">
             <input
               className="input"
               placeholder="Nouvelle playlist"
@@ -245,17 +245,17 @@ export default function MusicPage() {
           </div>
         </aside>
 
-        <main>
+        <main className="min-w-0">
           {error && <p className="mb-4 text-sm font-medium text-rose-600">{error}</p>}
           {!detail ? (
-            <div className="card p-10 text-center text-slate-500">
+            <div className="card p-6 text-center text-slate-500 sm:p-10">
               Sélectionne ou crée une playlist pour ajouter des pistes.
             </div>
           ) : (
             <div className="space-y-5">
-              <div className="card flex flex-wrap items-center justify-between gap-3 p-6">
-                <h2 className="font-display text-xl font-bold text-brand-900">{detail.name}</h2>
-                <div className="flex gap-2">
+              <div className="card grid gap-3 p-4 sm:p-6 md:flex md:items-center md:justify-between">
+                <h2 className="min-w-0 font-display text-xl font-bold text-brand-900">{detail.name}</h2>
+                <div className="grid gap-2 sm:flex">
                   <button type="button" className="btn-secondary" onClick={() => setAsDefault(detail.id)}>
                     Définir par défaut
                   </button>
@@ -265,7 +265,7 @@ export default function MusicPage() {
                 </div>
               </div>
 
-              <div className="card space-y-4 p-6">
+              <div className="card space-y-4 p-4 sm:p-6">
                 <h3 className="font-semibold text-slate-700">Ajouter une piste</h3>
                 <div>
                   <label className="label" htmlFor="upload">
@@ -284,7 +284,7 @@ export default function MusicPage() {
                     }}
                   />
                 </div>
-                <div className="flex gap-2">
+                <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
                   <input
                     className="input flex-1"
                     placeholder="Lien YouTube (https://youtube.com/watch?v=...)"
@@ -327,7 +327,7 @@ function SortableTrack({ track, onRemove }: { track: Track; onRemove: () => void
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={`card flex items-center gap-3 p-3 ${isDragging ? 'z-10 shadow-2xl' : ''}`}
+      className={`card flex min-w-0 items-center gap-3 p-3 ${isDragging ? 'z-10 shadow-2xl' : ''}`}
     >
       <button
         type="button"
@@ -339,13 +339,13 @@ function SortableTrack({ track, onRemove }: { track: Track; onRemove: () => void
         ⠿
       </button>
       {track.thumbnailUrl && (
-        <img src={track.thumbnailUrl} alt="" className="h-10 w-10 rounded-lg object-cover" />
+        <img src={track.thumbnailUrl} alt="" className="h-10 w-10 shrink-0 rounded-lg object-cover" />
       )}
       <div className="min-w-0 flex-1">
         <p className="truncate font-medium text-slate-700">{track.title}</p>
         <p className="text-xs text-slate-500">{track.type === 'YOUTUBE' ? 'YouTube' : 'Fichier local'}</p>
       </div>
-      <button type="button" className="btn-ghost text-rose-500" onClick={onRemove}>
+      <button type="button" className="btn-ghost shrink-0 text-rose-500" onClick={onRemove}>
         Retirer
       </button>
     </div>

@@ -26,15 +26,20 @@ export default function AdminLayout() {
   }
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
-    `rounded-xl px-3.5 py-2 text-sm font-semibold transition ${
+    `shrink-0 rounded-lg px-3 py-2 text-sm font-semibold transition ${
       isActive ? 'bg-brand-600 text-white' : 'text-brand-800 hover:bg-brand-100'
     }`;
 
   return (
-    <div className="mx-auto min-h-dvh w-full max-w-6xl px-4 py-6">
-      <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
-        <Logo size={34} />
-        <nav className="flex items-center gap-2" aria-label="Navigation admin">
+    <div className="mx-auto min-h-dvh w-full max-w-7xl overflow-x-hidden px-3 py-4 sm:px-5 sm:py-6 lg:px-8">
+      <header className="mb-6 flex flex-col gap-3 sm:mb-8 lg:flex-row lg:items-center lg:justify-between">
+        <div className="shrink-0">
+          <Logo size={34} />
+        </div>
+        <nav
+          className="-mx-3 flex max-w-[calc(100%+1.5rem)] items-center gap-1 overflow-x-auto px-3 pb-1 sm:mx-0 sm:max-w-full sm:flex-wrap sm:justify-end sm:overflow-visible sm:px-0 sm:pb-0"
+          aria-label="Navigation admin"
+        >
           <NavLink to="/admin" end className={linkClass}>
             Sessions
           </NavLink>
@@ -50,7 +55,7 @@ export default function AdminLayout() {
           <NavLink to="/admin/security" className={linkClass}>
             Sécurité
           </NavLink>
-          <button type="button" className="btn-ghost text-slate-500" onClick={logout}>
+          <button type="button" className="btn-ghost shrink-0 text-slate-500" onClick={logout}>
             Déconnexion
           </button>
           <ThemeToggle />

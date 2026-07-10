@@ -52,9 +52,9 @@ export default function QuestionnairesPage() {
 
   return (
     <div className="animate-fade-up">
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-display text-3xl font-bold text-brand-900">Questionnaires</h1>
-        <button type="button" className="btn-primary" onClick={() => setShowCreate(true)}>
+      <div className="mb-5 grid gap-3 sm:mb-6 sm:flex sm:items-center sm:justify-between">
+        <h1 className="font-display text-2xl font-bold text-brand-900 sm:text-3xl">Questionnaires</h1>
+        <button type="button" className="btn-primary w-full sm:w-auto" onClick={() => setShowCreate(true)}>
           + Nouveau questionnaire
         </button>
       </div>
@@ -69,9 +69,9 @@ export default function QuestionnairesPage() {
           const draft = q.versions.find((v) => v.status === 'DRAFT');
           const published = q.versions.find((v) => v.status === 'PUBLISHED');
           return (
-            <div key={q.id} className="card p-6">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
+            <div key={q.id} className="card p-4 sm:p-6">
+              <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
+                <div className="min-w-0">
                   <h2 className="font-display text-lg font-bold text-brand-900">{q.title}</h2>
                   {q.description && <p className="mt-1 text-sm text-slate-500">{q.description}</p>}
                   <div className="mt-2 flex flex-wrap gap-2 text-xs">
@@ -87,7 +87,7 @@ export default function QuestionnairesPage() {
                     )}
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="grid gap-2 sm:flex sm:flex-wrap lg:justify-end">
                   {draft ? (
                     <Link to={`/admin/questionnaires/versions/${draft.id}`} className="btn-secondary">
                       Éditer le brouillon

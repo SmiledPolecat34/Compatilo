@@ -161,7 +161,7 @@ export default function SessionDetailPage() {
     return (
       <div className="animate-fade-up space-y-6">
         <Skeleton className="h-8 w-64" />
-        <div className="grid gap-6 lg:grid-cols-3">
+        <div className="grid gap-5 lg:grid-cols-3 lg:gap-6">
           <div className="space-y-6 lg:col-span-2">
             <Skeleton className="h-48 w-full" />
             <Skeleton className="h-32 w-full" />
@@ -180,10 +180,10 @@ export default function SessionDetailPage() {
       <Link to="/admin" className="btn-ghost mb-4 inline-flex">
         ← Sessions
       </Link>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <div>
+      <div className="mb-6 grid gap-4 lg:flex lg:items-center lg:justify-between">
+        <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="font-display text-3xl font-bold text-brand-900">
+            <h1 className="min-w-0 font-display text-2xl font-bold text-brand-900 sm:text-3xl">
               {session.label ||
                 session.participants.map((p) => p.firstName).join(' & ') ||
                 'Session sans nom'}
@@ -198,7 +198,7 @@ export default function SessionDetailPage() {
             {session.closedAt && ` · fermée le ${new Date(session.closedAt).toLocaleString('fr-FR')}`}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="grid gap-2 sm:flex lg:justify-end">
           {session.status === 'CLOSED' ? (
             <button type="button" className="btn-secondary" onClick={reopenSession}>
               Rouvrir la session
@@ -215,7 +215,7 @@ export default function SessionDetailPage() {
       </div>
 
       {session.status === 'CLOSED' && (
-        <div className="mb-6 flex items-center gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+        <div className="mb-6 flex items-center gap-3 rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
           <span aria-hidden className="text-lg">
             🔒
           </span>
@@ -224,17 +224,17 @@ export default function SessionDetailPage() {
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-5 lg:grid-cols-3 lg:gap-6">
         <div className="space-y-6 lg:col-span-2">
           {/* Participants */}
-          <section className="card p-6">
+          <section className="card p-4 sm:p-6">
             <h2 className="mb-4 font-display text-lg font-bold text-brand-900">Participants</h2>
             {session.participants.length === 0 ? (
               <p className="text-slate-500">Personne n'a encore rejoint la session.</p>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2">
                 {session.participants.map((p) => (
-                  <div key={p.id} className="rounded-2xl border border-brand-100 p-4">
+                  <div key={p.id} className="rounded-lg border border-brand-100 p-4">
                     <div className="font-semibold text-brand-900">
                       {p.firstName} {p.nickname && <span className="text-slate-500">« {p.nickname} »</span>}
                     </div>
@@ -263,7 +263,7 @@ export default function SessionDetailPage() {
           </section>
 
           {/* Rapport */}
-          <section className="card p-6">
+          <section className="card p-4 sm:p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className="font-display text-lg font-bold text-brand-900">Rapport</h2>
               <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-slate-600">
@@ -310,7 +310,7 @@ export default function SessionDetailPage() {
 
         <div className="space-y-6">
           {/* Réglages */}
-          <section className="card p-6">
+          <section className="card p-4 sm:p-6">
             <h2 className="mb-4 font-display text-lg font-bold text-brand-900">Réglages</h2>
             <div className="space-y-4">
               <div>
@@ -348,7 +348,7 @@ export default function SessionDetailPage() {
           </section>
 
           {/* Notes privées */}
-          <section className="card p-6">
+          <section className="card p-4 sm:p-6">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="font-display text-lg font-bold text-brand-900">Notes privées</h2>
               <span className="text-xs text-slate-500">{notesSaved ? 'Enregistré ✓' : '…'}</span>
@@ -363,7 +363,7 @@ export default function SessionDetailPage() {
           </section>
 
           {/* Timeline */}
-          <section className="card p-6">
+          <section className="card p-4 sm:p-6">
             <h2 className="mb-4 font-display text-lg font-bold text-brand-900">Timeline</h2>
             <ol className="space-y-3">
               {timeline.map((e) => (

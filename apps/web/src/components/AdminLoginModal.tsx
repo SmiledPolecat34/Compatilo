@@ -103,7 +103,7 @@ export default function AdminLoginModal({ open, onClose }: { open: boolean; onCl
       aria-label="Connexion administrateur"
     >
       <div
-        className="card w-full max-w-sm rounded-b-none p-6 sm:rounded-3xl sm:p-8 animate-fade-up"
+        className="card w-full max-w-sm rounded-b-none p-4 sm:rounded-lg sm:p-8 animate-fade-up"
         style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}
       >
         <div className="flex items-start justify-between">
@@ -165,7 +165,7 @@ export default function AdminLoginModal({ open, onClose }: { open: boolean; onCl
               </label>
               <input
                 id="admin-code"
-                className="input text-center text-2xl font-bold tracking-[0.4em]"
+                className="input text-center text-2xl font-bold tracking-[0.3em] sm:tracking-[0.4em]"
                 inputMode="numeric"
                 autoComplete="one-time-code"
                 maxLength={6}
@@ -194,7 +194,7 @@ export default function AdminLoginModal({ open, onClose }: { open: boolean; onCl
             >
               {loading ? 'Vérification…' : 'Valider'}
             </button>
-            <div className="flex items-center justify-between text-sm">
+            <div className="grid gap-2 text-sm sm:flex sm:items-center sm:justify-between">
               <button
                 type="button"
                 className="btn-ghost text-slate-500"

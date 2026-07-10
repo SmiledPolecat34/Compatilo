@@ -137,14 +137,14 @@ export default function SessionFlow() {
 
   if (phase === 'intro') {
     return (
-      <div className="flex min-h-dvh flex-col items-center justify-center px-6 py-10">
-        <div className="card w-full max-w-md p-8 text-center animate-fade-up">
+      <div className="flex min-h-dvh flex-col items-center justify-center px-4 py-8 sm:px-6 sm:py-10">
+        <div className="card w-full max-w-md p-5 text-center animate-fade-up sm:p-8">
           <Logo size={44} />
           <h1 className="mt-6 font-display text-2xl font-bold text-brand-900">
             Bonjour {data.participant.firstName} 👋
           </h1>
           <p className="mt-4 text-slate-600">{data.questionnaire.description}</p>
-          <div className="mt-6 rounded-2xl bg-gradient-to-br from-brand-50 to-rose-50 p-5 text-left">
+          <div className="mt-6 rounded-lg bg-gradient-to-br from-brand-50 to-rose-50 p-5 text-left">
             <div className="text-2xl">⭐</div>
             <p className="mt-2 text-sm leading-relaxed text-slate-700">
               Pendant le questionnaire, sélectionne entre{' '}
@@ -166,9 +166,9 @@ export default function SessionFlow() {
   const favoritesOk = favorites.size >= data.favoritesRule.min;
 
   return (
-    <div className="mx-auto min-h-dvh w-full max-w-2xl px-4 pb-32 pt-6">
+    <div className="mx-auto min-h-dvh w-full max-w-2xl px-3 pb-32 pt-4 sm:px-4 sm:pt-6">
       {/* Barre de progression */}
-      <header className="sticky top-0 z-10 -mx-4 bg-gradient-to-b from-[#faf8ff] via-[#faf8ff] to-transparent px-4 pb-4 pt-2">
+      <header className="sticky top-0 z-10 -mx-3 bg-gradient-to-b from-[#faf8ff] via-[#faf8ff] to-transparent px-3 pb-4 pt-2 sm:-mx-4 sm:px-4">
         <div className="flex items-center justify-between">
           <Logo size={30} />
           <div className="flex items-center gap-3 text-sm text-slate-500">
@@ -204,7 +204,7 @@ export default function SessionFlow() {
         </div>
       )}
 
-      <main className="animate-fade-up" key={page.id}>
+      <main className="min-w-0 animate-fade-up" key={page.id}>
         <h2 className="mt-4 font-display text-2xl font-bold text-brand-900">{page.title}</h2>
         {page.description && <p className="mt-1 text-slate-500">{page.description}</p>}
 
@@ -213,7 +213,7 @@ export default function SessionFlow() {
             const QuestionComponent = getQuestionComponent(q.type);
             const isFav = favorites.has(q.id);
             return (
-              <div key={q.id} className="card p-5">
+              <div key={q.id} className="card p-4 sm:p-5">
                 <div className="flex items-start justify-between gap-3">
                   <p className="font-semibold text-slate-800">
                     <span className="mr-2 text-sm font-bold text-brand-400">{i + 1}</span>
@@ -250,29 +250,29 @@ export default function SessionFlow() {
 
       {/* Navigation */}
       <footer
-        className="fixed inset-x-0 bottom-0 border-t border-brand-100 bg-white/90 p-4 backdrop-blur"
+        className="fixed inset-x-0 bottom-0 border-t border-brand-100 bg-white/90 p-3 backdrop-blur sm:p-4"
         style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
       >
-        <div className="mx-auto flex max-w-2xl items-center gap-3">
+        <div className="mx-auto grid max-w-2xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 sm:gap-3">
           <button
             type="button"
-            className="btn-secondary"
+            className="btn-secondary px-3 sm:px-5"
             onClick={() => setPageIndex((i) => Math.max(0, i - 1))}
             disabled={pageIndex === 0}
           >
             ← Retour
           </button>
-          <div className="flex-1 text-center text-sm text-slate-500">
+          <div className="min-w-0 text-center text-xs text-slate-500 sm:text-sm">
             Page {pageIndex + 1}/{data.questionnaire.pages.length}
           </div>
           {data.readOnly ? (
-            <button type="button" className="btn-primary" onClick={() => navigate('/session/report')}>
+            <button type="button" className="btn-primary px-3 sm:px-5" onClick={() => navigate('/session/report')}>
               Voir le rapport
             </button>
           ) : isLastPage ? (
             <button
               type="button"
-              className="btn-primary"
+              className="btn-primary px-3 sm:px-5"
               onClick={complete}
               disabled={!allAnswered || !favoritesOk || completing}
             >
@@ -281,7 +281,7 @@ export default function SessionFlow() {
           ) : (
             <button
               type="button"
-              className="btn-primary"
+              className="btn-primary px-3 sm:px-5"
               onClick={() => {
                 setPageIndex((i) => i + 1);
                 window.scrollTo({ top: 0 });

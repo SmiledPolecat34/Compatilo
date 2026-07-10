@@ -16,9 +16,14 @@ export class LocalAudioProvider implements PlaybackProvider {
   }
 
   load(track: Track): void {
-    if (!track.fileUrl) return;
+    if (!track.fileUrl) {
+      this.audio.removeAttribute('src');
+      this.audio.load();
+      return;
+    }
     this.audio.src = apiUrl(track.fileUrl);
     this.audio.currentTime = 0;
+    this.audio.load();
   }
 
   play() {

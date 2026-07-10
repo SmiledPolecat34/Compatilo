@@ -76,6 +76,12 @@
   --text-body: #3a1f0f;
 }
 
+html,
+body,
+#root {
+  min-width: 0;
+}
+
 html {
   -webkit-text-size-adjust: 100%;
   scroll-behavior: smooth;
@@ -86,6 +92,7 @@ body {
   background: linear-gradient(160deg, var(--surface-1) 0%, var(--surface-2) 55%, var(--surface-3) 100%);
   min-height: 100dvh;
   color: var(--text-body);
+  overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   transition: background-color 0.3s ease, color 0.3s ease;
 }
@@ -128,25 +135,25 @@ textarea {
 }
 
 .card {
-  @apply rounded-3xl shadow-[0_8px_30px_rgba(88,52,160,0.08)] backdrop-blur border;
+  @apply rounded-lg shadow-[0_8px_24px_rgba(88,52,160,0.07)] backdrop-blur border;
   background: var(--surface-card);
   border-color: var(--surface-border);
 }
 
 .btn-primary {
-  @apply inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-brand-600 to-rose-accent px-6 py-3.5 font-semibold text-white shadow-lg shadow-brand-500/25 transition active:scale-[0.98] hover:opacity-95 disabled:opacity-40 disabled:pointer-events-none;
+  @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-brand-600 to-rose-accent px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-500/20 transition active:scale-[0.98] hover:opacity-95 disabled:opacity-40 disabled:pointer-events-none sm:px-5 sm:py-3 sm:text-base;
 }
 
 .btn-secondary {
-  @apply inline-flex items-center justify-center gap-2 rounded-2xl border border-brand-200 bg-white px-5 py-3 font-semibold text-brand-700 transition hover:bg-brand-50 active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none;
+  @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-brand-200 bg-white px-4 py-2.5 text-sm font-semibold text-brand-700 transition hover:bg-brand-50 active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none sm:px-5 sm:py-3 sm:text-base;
 }
 
 .btn-ghost {
-  @apply inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium text-brand-700 transition hover:bg-brand-100/60 active:scale-[0.98];
+  @apply inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-brand-700 transition hover:bg-brand-100/60 active:scale-[0.98];
 }
 
 .input {
-  @apply w-full rounded-2xl border border-brand-200 bg-white px-4 py-3 outline-none transition focus:border-brand-400 focus:ring-4 focus:ring-brand-200/50 placeholder:text-slate-500;
+  @apply w-full rounded-lg border border-brand-200 bg-white px-4 py-3 outline-none transition focus:border-brand-400 focus:ring-4 focus:ring-brand-200/50 placeholder:text-slate-500;
 }
 
 .label {

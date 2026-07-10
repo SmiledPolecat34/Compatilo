@@ -46,15 +46,15 @@ export default function Dashboard() {
 
   return (
     <div className="animate-fade-up">
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-display text-3xl font-bold text-brand-900">Sessions</h1>
-        <button type="button" className="btn-primary" onClick={() => setShowCreate(true)}>
+      <div className="mb-5 grid gap-3 sm:mb-6 sm:flex sm:items-center sm:justify-between">
+        <h1 className="font-display text-2xl font-bold text-brand-900 sm:text-3xl">Sessions</h1>
+        <button type="button" className="btn-primary w-full sm:w-auto" onClick={() => setShowCreate(true)}>
           + Nouvelle session
         </button>
       </div>
 
       <input
-        className="input mb-6 max-w-md"
+        className="input mb-6 max-w-none sm:max-w-md"
         placeholder="Rechercher : prénom, surnom, PIN, code rapport…"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
@@ -64,7 +64,7 @@ export default function Dashboard() {
       {sessions === null ? (
         <SkeletonCards />
       ) : sessions.length === 0 ? (
-        <div className="card p-10 text-center text-slate-500">
+        <div className="card p-6 text-center text-slate-500 sm:p-10">
           Aucune session. Crée ta première session pour inviter un duo !
         </div>
       ) : (
@@ -73,10 +73,10 @@ export default function Dashboard() {
             <Link
               key={s.id}
               to={`/admin/sessions/${s.id}`}
-              className="card block p-5 transition hover:-translate-y-0.5 hover:shadow-xl"
+              className="card block p-4 transition hover:-translate-y-0.5 hover:shadow-xl sm:p-5"
             >
-              <div className="flex items-start justify-between">
-                <div className="font-semibold text-brand-900">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 font-semibold text-brand-900">
                   {s.label ||
                     (s.participants.length > 0
                       ? s.participants.map((p) => p.firstName).join(' & ')
@@ -85,7 +85,7 @@ export default function Dashboard() {
                 <SessionStatusBadge status={s.status} />
               </div>
               <p className="mt-1 text-xs text-slate-500">{s.questionnaire}</p>
-              <div className="mt-3 flex items-center gap-2 text-sm text-slate-500">
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-slate-500">
                 {s.participants.length === 0 && <span>Personne n'a encore rejoint</span>}
                 {s.participants.map((p) => (
                   <span
@@ -223,7 +223,7 @@ function CreateSessionModal({
         </div>
         <div>
           <span className="label">Nom affiché à l'invité</span>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid gap-2 sm:grid-cols-2">
             {(Object.keys(IDENTITY_LABELS) as IdentityDisplayMode[]).map((mode) => (
               <label
                 key={mode}
@@ -291,7 +291,7 @@ function InviteModal({ created, onClose }: { created: CreatedSession; onClose: (
   return (
     <Modal title="Session créée 🎉" onClose={onClose}>
       <div className="space-y-4">
-        <div className="rounded-2xl bg-brand-50 p-5 text-center">
+        <div className="rounded-lg bg-brand-50 p-5 text-center">
           <p className="text-sm font-semibold text-slate-500">Code PIN</p>
           <p className="mt-1 font-display text-4xl font-bold tracking-[0.3em] text-brand-800">
             {created.pin}
@@ -300,7 +300,7 @@ function InviteModal({ created, onClose }: { created: CreatedSession; onClose: (
             Affiché une seule fois — note-le ou copie l'invitation.
           </p>
         </div>
-        <div className="rounded-2xl border border-brand-100 p-4 text-sm text-slate-600 whitespace-pre-wrap">
+        <div className="rounded-lg border border-brand-100 p-4 text-sm text-slate-600 whitespace-pre-wrap">
           {created.inviteMessage}
         </div>
         <button type="button" className="btn-primary w-full" onClick={copy}>
@@ -330,7 +330,7 @@ export function Modal({
       aria-label={title}
     >
       <div
-        className="card max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-b-none p-6 sm:rounded-3xl animate-fade-up"
+        className="card max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-b-none p-4 sm:rounded-lg sm:p-6 animate-fade-up"
         style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}
       >
         <div className="mb-4 flex items-start justify-between">

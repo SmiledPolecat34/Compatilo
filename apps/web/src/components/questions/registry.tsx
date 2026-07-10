@@ -64,7 +64,7 @@ function YesNoQuestion({ question, value, onChange }: QuestionComponentProps) {
           role="radio"
           aria-checked={value === opt.value}
           onClick={() => onChange(opt.value)}
-          className={`rounded-2xl border-2 px-3 py-3 font-semibold transition active:scale-[0.97] ${
+          className={`rounded-lg border-2 px-3 py-3 font-semibold transition active:scale-[0.97] ${
             value === opt.value ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-brand-100 bg-white text-slate-500 hover:border-brand-200'
           }`}
         >
@@ -88,7 +88,7 @@ function ChoiceQuestion({ question, value, onChange }: QuestionComponentProps) {
           role="radio"
           aria-checked={value === opt.value}
           onClick={() => onChange(opt.value)}
-          className={`rounded-2xl border-2 px-3 py-3 font-semibold transition active:scale-[0.97] ${
+          className={`rounded-lg border-2 px-3 py-3 font-semibold transition active:scale-[0.97] ${
             value === opt.value ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-brand-100 bg-white text-slate-500 hover:border-brand-200'
           }`}
         >
@@ -175,13 +175,13 @@ function OriginsQuestion({ value, onChange }: QuestionComponentProps) {
   return (
     <div className="space-y-3">
       <input className="input" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Rechercher une origine" />
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid gap-2 sm:grid-cols-2">
         {filtered.map((origin) => (
           <button
             key={origin.value}
             type="button"
             onClick={() => toggle(origin.value)}
-            className={`rounded-2xl border px-3 py-2 text-left text-sm font-semibold ${
+            className={`rounded-lg border px-3 py-2 text-left text-sm font-semibold ${
               current.selected.includes(origin.value)
                 ? 'border-brand-500 bg-brand-50 text-brand-700'
                 : 'border-brand-100 bg-white text-slate-600'

@@ -17,7 +17,7 @@ export default function Home() {
   }, [prefilledPin]);
 
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-center px-6 py-10">
+    <div className="flex min-h-dvh flex-col items-center justify-center px-4 py-8 sm:px-6 sm:py-10">
       <main className="flex w-full max-w-md flex-col items-center text-center animate-fade-up">
         <Logo size={56} />
         <h1 className="mt-8 font-display text-4xl font-bold leading-tight text-brand-900 sm:text-5xl">
@@ -27,7 +27,7 @@ export default function Home() {
             compatibilité
           </span>
         </h1>
-        <p className="mt-4 text-lg text-slate-500">
+        <p className="mt-4 text-base text-slate-500 sm:text-lg">
           Répondez chacun de votre côté, comparez vos réponses et recevez votre rapport
           personnalisé.
         </p>
@@ -36,7 +36,7 @@ export default function Home() {
           Entrer un code PIN
         </button>
 
-        <div className="mt-14 grid w-full grid-cols-3 gap-3 text-sm text-slate-500">
+        <div className="mt-10 grid w-full grid-cols-1 gap-3 text-sm text-slate-500 sm:mt-14 sm:grid-cols-3">
           {[
             ['🔒', 'Privé'],
             ['💜', '2 personnes'],

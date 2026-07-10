@@ -71,30 +71,48 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const youtubeContainerElRef = useRef<HTMLDivElement | null>(null);
   const activeTrackTypeRef = useRef<'LOCAL' | 'YOUTUBE' | null>(null);
   const playlistIdRef = useRef<string | null>(null);
+  const orderLengthRef = useRef(0);
+  const queuePosRef = useRef(0);
+  const repeatModeRef = useRef<RepeatMode>('off');
+  const handleEndedRef = useRef<() => void>(() => undefined);
 
   const currentIndex = order[queuePos] ?? -1;
   const currentTrack = playlist && currentIndex >= 0 ? playlist.tracks[currentIndex] : null;
 
-  const next = useCallback(
-    (auto = false) => {
-      setQueuePos((pos) => {
-        const len = order.length;
-        if (len === 0) return pos;
-        if (pos + 1 < len) return pos + 1;
-        if (!auto || repeatMode === 'all') return 0;
-        return pos; // fin de la file, pas de bouclage automatique
-      });
-    },
-    [order.length, repeatMode],
-  );
+  useEffect(() => {
+    orderLengthRef.current = order.length;
+  }, [order.length]);
+
+  useEffect(() => {
+    queuePosRef.current = queuePos;
+  }, [queuePos]);
+
+  useEffect(() => {
+    repeatModeRef.current = repeatMode;
+  }, [repeatMode]);
+
+  const next = useCallback((auto = false) => {
+    const len = orderLengthRef.current;
+    const pos = queuePosRef.current;
+    if (len === 0) return;
+    if (auto && pos + 1 >= len && repeatModeRef.current !== 'all') {
+      setIsPlaying(false);
+      return;
+    }
+    setQueuePos((pos) => {
+      if (pos + 1 < len) return pos + 1;
+      if (!auto || repeatModeRef.current === 'all') return 0;
+      return pos; // fin de la file, pas de bouclage automatique
+    });
+  }, []);
 
   const prev = useCallback(() => {
     setQueuePos((pos) => {
-      const len = order.length;
+      const len = orderLengthRef.current;
       if (len === 0) return pos;
       return (pos - 1 + len) % len;
     });
-  }, [order.length]);
+  }, []);
 
   // ── Providers persistants (créés une seule fois) ────────────────────
   useEffect(() => {
@@ -102,7 +120,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     localProviderRef.current = new LocalAudioProvider(audioElRef.current, {
       onTimeUpdate: (t) => activeTrackTypeRef.current === 'LOCAL' && setCurrentTime(t),
       onDurationChange: (d) => activeTrackTypeRef.current === 'LOCAL' && setDuration(d),
-      onEnded: () => activeTrackTypeRef.current === 'LOCAL' && handleEnded(),
+      onEnded: () => activeTrackTypeRef.current === 'LOCAL' && handleEndedRef.current(),
     });
     return () => localProviderRef.current?.destroy();
   }, []);
@@ -114,7 +132,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     const provider = new YouTubeProvider(youtubeContainerEl, {
       onTimeUpdate: (t) => activeTrackTypeRef.current === 'YOUTUBE' && setCurrentTime(t),
       onDurationChange: (d) => activeTrackTypeRef.current === 'YOUTUBE' && setDuration(d),
-      onEnded: () => activeTrackTypeRef.current === 'YOUTUBE' && handleEnded(),
+      onEnded: () => activeTrackTypeRef.current === 'YOUTUBE' && handleEndedRef.current(),
     });
     youtubeProviderRef.current = provider;
     setYoutubeProviderReady(true);
@@ -127,15 +145,17 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     };
   }, [youtubeContainerEl]);
 
-  function handleEnded() {
-    if (repeatMode === 'one') {
-      const provider = activeProvider();
-      provider?.seek(0);
-      void provider?.play();
-      return;
-    }
-    next(true);
-  }
+  useEffect(() => {
+    handleEndedRef.current = () => {
+      if (repeatModeRef.current === 'one' || (repeatModeRef.current === 'all' && orderLengthRef.current <= 1)) {
+        const provider = activeProvider();
+        provider?.seek(0);
+        void Promise.resolve(provider?.play()).catch(() => setIsPlaying(false));
+        return;
+      }
+      next(true);
+    };
+  }, [next]);
 
   function activeProvider() {
     return activeTrackTypeRef.current === 'YOUTUBE'
@@ -155,7 +175,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     setDuration(currentTrack.durationSeconds ?? 0);
     const provider = activeProvider();
     provider?.load(currentTrack);
-    if (isPlaying) void provider?.play();
+    if (isPlaying) void Promise.resolve(provider?.play()).catch(() => setIsPlaying(false));
     // Ne dépend volontairement que de l'identité de la piste : isPlaying
     // est géré par l'effet dédié ci-dessous pour éviter un double play().
   }, [currentTrack?.id, youtubeProviderReady]);
@@ -164,7 +184,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const provider = activeProvider();
     if (!provider || !currentTrack) return;
-    if (isPlaying) void provider.play();
+    if (isPlaying) void Promise.resolve(provider.play()).catch(() => setIsPlaying(false));
     else provider.pause();
   }, [isPlaying, currentTrack?.id, youtubeProviderReady]);
 

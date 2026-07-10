@@ -23,7 +23,7 @@ export default function MiniPlayer() {
 
   return (
     <div
-      className={`fixed right-4 z-40 flex flex-col items-end ${clearsFixedFooter ? 'bottom-24' : 'bottom-4'}`}
+      className={`fixed left-3 right-3 z-40 flex flex-col items-end sm:left-auto sm:right-4 ${clearsFixedFooter ? 'bottom-24' : 'bottom-4'}`}
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       {/*
@@ -33,7 +33,7 @@ export default function MiniPlayer() {
         session — le démonter détruirait le lecteur officiel YouTube.
       */}
       <div
-        className={`card mb-3 w-72 p-4 sm:w-80 ${expanded ? 'animate-fade-up' : 'hidden'}`}
+        className={`card mb-3 w-full max-w-80 p-4 ${expanded ? 'animate-fade-up' : 'hidden'}`}
       >
         {player.currentTrack?.type === 'YOUTUBE' && (
           <div

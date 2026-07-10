@@ -104,10 +104,10 @@ export default function SecurityPage() {
   }
 
   return (
-    <div className="animate-fade-up space-y-6">
-      <h1 className="font-display text-3xl font-bold text-brand-900">Sécurité</h1>
+    <div className="animate-fade-up space-y-5 sm:space-y-6">
+      <h1 className="font-display text-2xl font-bold text-brand-900 sm:text-3xl">Sécurité</h1>
 
-      <section className="card p-6">
+      <section className="card p-4 sm:p-6">
         <h2 className="font-display text-lg font-bold text-brand-900">
           Authentification à deux facteurs
         </h2>
@@ -124,7 +124,7 @@ export default function SecurityPage() {
             <p className="text-sm text-slate-600">
               Scanne ce QR code avec Google Authenticator, Authy ou une app compatible TOTP.
             </p>
-            {qrDataUrl && <img src={qrDataUrl} alt="QR code d'enrôlement TOTP" className="rounded-xl" />}
+            {qrDataUrl && <img src={qrDataUrl} alt="QR code d'enrôlement TOTP" className="h-auto max-w-full rounded-lg" />}
             <p className="break-all rounded-lg bg-brand-50 p-2 text-xs text-slate-500">{secret}</p>
             <input
               className="input text-center text-xl font-bold tracking-[0.3em]"
@@ -135,7 +135,7 @@ export default function SecurityPage() {
               placeholder="000000"
             />
             {error && <p className="text-sm font-medium text-rose-600">{error}</p>}
-            <div className="flex gap-2">
+            <div className="grid gap-2 sm:flex">
               <button type="button" className="btn-ghost" onClick={() => setEnrolling(false)}>
                 Annuler
               </button>
@@ -156,7 +156,7 @@ export default function SecurityPage() {
         )}
       </section>
 
-      <section className="card p-6">
+      <section className="card p-4 sm:p-6">
         <h2 className="font-display text-lg font-bold text-brand-900">Appareils de confiance</h2>
         <p className="mt-1 text-sm text-slate-500">
           Mémorisés jusqu'à {status.trustedDeviceDays} jours — le code e-mail est sauté sur ces appareils.
@@ -166,8 +166,8 @@ export default function SecurityPage() {
         ) : (
           <div className="mt-4 space-y-2">
             {status.trustedDevices.map((d) => (
-              <div key={d.id} className="flex items-center justify-between rounded-xl border border-brand-100 p-3 text-sm">
-                <div>
+              <div key={d.id} className="grid gap-3 rounded-lg border border-brand-100 p-3 text-sm sm:flex sm:items-center sm:justify-between">
+                <div className="min-w-0">
                   <p className="font-medium text-slate-700">{d.label || 'Appareil inconnu'}</p>
                   <p className="text-xs text-slate-500">
                     Dernière utilisation : {new Date(d.lastUsedAt).toLocaleString('fr-FR')}
@@ -182,7 +182,7 @@ export default function SecurityPage() {
         )}
       </section>
 
-      <section className="card p-6">
+      <section className="card p-4 sm:p-6">
         <h2 className="font-display text-lg font-bold text-brand-900">Sessions actives</h2>
         <p className="mt-1 text-sm text-slate-500">
           En cas de doute (appareil perdu, accès partagé), invalide immédiatement tous les jetons

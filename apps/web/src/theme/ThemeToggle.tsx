@@ -10,7 +10,7 @@ export default function ThemeToggle() {
   const { theme, setTheme } = useTheme();
 
   return (
-    <div role="radiogroup" aria-label="Thème de l'application" className="flex items-center gap-1 rounded-xl bg-brand-100/60 p-1">
+    <div role="radiogroup" aria-label="Thème de l'application" className="flex shrink-0 items-center gap-1 rounded-lg bg-brand-100/60 p-1">
       {OPTIONS.map((opt) => (
         <button
           key={opt.value}
@@ -20,7 +20,7 @@ export default function ThemeToggle() {
           aria-label={opt.label}
           title={opt.label}
           onClick={() => setTheme(opt.value)}
-          className={`rounded-lg px-2 py-1.5 text-sm transition ${
+          className={`rounded-md px-2 py-1.5 text-sm transition ${
             theme === opt.value ? 'bg-white shadow-sm' : 'opacity-60 hover:opacity-100'
           }`}
         >

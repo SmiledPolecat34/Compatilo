@@ -5,7 +5,7 @@ export function loadYouTubeApi(): Promise<typeof YT> {
   if (apiPromise) return apiPromise;
 
   apiPromise = new Promise((resolve) => {
-    if (window.YT) {
+    if (window.YT?.Player) {
       resolve(window.YT);
       return;
     }

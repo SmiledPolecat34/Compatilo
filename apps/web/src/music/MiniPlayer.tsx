@@ -35,10 +35,17 @@ export default function MiniPlayer() {
       <div
         className={`card mb-3 w-72 p-4 sm:w-80 ${expanded ? 'animate-fade-up' : 'hidden'}`}
       >
-        <div
-          ref={player.youtubeContainerRef}
-          className={showVideo ? 'mb-3 aspect-video w-full overflow-hidden rounded-xl' : 'h-0 w-0 overflow-hidden'}
-        />
+        {player.currentTrack?.type === 'YOUTUBE' && (
+          <div
+            className={
+              showVideo
+                ? 'mb-3 aspect-video w-full overflow-hidden rounded-xl bg-black'
+                : 'pointer-events-none h-px w-px overflow-hidden opacity-0'
+            }
+          >
+            <div ref={player.youtubeContainerRef} className="h-full w-full" />
+          </div>
+        )}
 
         {player.currentTrack ? (
             <>

@@ -62,6 +62,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [muted, setMuted] = useState(false);
   const [repeatMode, setRepeatMode] = useState<RepeatMode>('off');
   const [shuffle, setShuffle] = useState(false);
+  const [youtubeContainerEl, setYoutubeContainerEl] = useState<HTMLDivElement | null>(null);
+  const [youtubeProviderReady, setYoutubeProviderReady] = useState(false);
 
   const audioElRef = useRef<HTMLAudioElement | null>(null);
   const localProviderRef = useRef<LocalAudioProvider | null>(null);
@@ -108,14 +110,22 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // Le conteneur (rendu par <MiniPlayer/>, enfant de ce provider) est déjà
     // attaché : les refs sont posées avant que les effets ne s'exécutent.
-    if (!youtubeContainerElRef.current) return;
-    youtubeProviderRef.current = new YouTubeProvider(youtubeContainerElRef.current, {
+    if (!youtubeContainerEl) return;
+    const provider = new YouTubeProvider(youtubeContainerEl, {
       onTimeUpdate: (t) => activeTrackTypeRef.current === 'YOUTUBE' && setCurrentTime(t),
       onDurationChange: (d) => activeTrackTypeRef.current === 'YOUTUBE' && setDuration(d),
       onEnded: () => activeTrackTypeRef.current === 'YOUTUBE' && handleEnded(),
     });
-    return () => youtubeProviderRef.current?.destroy();
-  }, []);
+    youtubeProviderRef.current = provider;
+    setYoutubeProviderReady(true);
+    return () => {
+      provider.destroy();
+      if (youtubeProviderRef.current === provider) {
+        youtubeProviderRef.current = null;
+        setYoutubeProviderReady(false);
+      }
+    };
+  }, [youtubeContainerEl]);
 
   function handleEnded() {
     if (repeatMode === 'one') {
@@ -148,7 +158,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     if (isPlaying) void provider?.play();
     // Ne dépend volontairement que de l'identité de la piste : isPlaying
     // est géré par l'effet dédié ci-dessous pour éviter un double play().
-  }, [currentTrack?.id]);
+  }, [currentTrack?.id, youtubeProviderReady]);
 
   // ── Réagir à isPlaying ─────────────────────────────────────────────
   useEffect(() => {
@@ -156,7 +166,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     if (!provider || !currentTrack) return;
     if (isPlaying) void provider.play();
     else provider.pause();
-  }, [isPlaying]);
+  }, [isPlaying, currentTrack?.id, youtubeProviderReady]);
 
   // ── Volume / mute ────────────────────────────────────────────────────
   useEffect(() => {
@@ -215,6 +225,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     });
   }, [playlist, currentIndex]);
 
+  const youtubeContainerRef = useCallback((el: HTMLDivElement | null) => {
+    youtubeContainerElRef.current = el;
+    setYoutubeContainerEl(el);
+  }, []);
+
   const value = useMemo<PlayerContextValue>(
     () => ({
       enabled,
@@ -228,9 +243,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       muted,
       repeatMode,
       shuffle,
-      youtubeContainerRef: (el) => {
-        youtubeContainerElRef.current = el;
-      },
+      youtubeContainerRef,
       toggle: () => setIsPlaying((p) => (currentTrack ? !p : p)),
       next: () => next(false),
       prev,
@@ -267,6 +280,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       next,
       prev,
       toggleShuffle,
+      youtubeContainerRef,
     ],
   );
 

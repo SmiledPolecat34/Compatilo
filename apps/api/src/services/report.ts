@@ -6,7 +6,7 @@ import { computeDisplayName, type IdentityDisplayMode } from '../domain/identity
 import {
   compareAnswers,
   computeScore,
-  isTrilean,
+  isComparableAnswer,
   type MatchKind,
   type TrileanValue,
 } from '../domain/compatibility.js';
@@ -89,8 +89,8 @@ export async function generateReport(sessionId: string) {
     for (const q of page.questions) {
       const rawA = answersA.get(q.id);
       const rawB = answersB.get(q.id);
-      const vA = isTrilean(rawA) ? rawA : null;
-      const vB = isTrilean(rawB) ? rawB : null;
+      const vA = isComparableAnswer(q.type, rawA) ? rawA : null;
+      const vB = isComparableAnswer(q.type, rawB) ? rawB : null;
       const kind = vA && vB ? compareAnswers(vA, vB) : null;
       if (kind) {
         pageKinds.push(kind);

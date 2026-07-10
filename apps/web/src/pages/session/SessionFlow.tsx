@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, ApiError, tokens } from '../../api/client';
-import type { QuestionnairePayload, TrileanValue } from '../../types';
+import type { AnswerValue, QuestionDto, QuestionnairePayload } from '../../types';
 import Logo from '../../components/Logo';
 import { getQuestionComponent } from '../../components/questions/registry';
 import { PageSpinner } from '../../components/Skeleton';
@@ -12,7 +12,7 @@ export default function SessionFlow() {
   const navigate = useNavigate();
   const [phase, setPhase] = useState<Phase>('loading');
   const [data, setData] = useState<QuestionnairePayload | null>(null);
-  const [answers, setAnswers] = useState<Record<string, TrileanValue>>({});
+  const [answers, setAnswers] = useState<Record<string, AnswerValue>>({});
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [pageIndex, setPageIndex] = useState(0);
   const [saving, setSaving] = useState(false);
@@ -54,14 +54,30 @@ export default function SessionFlow() {
       });
   }, [navigate]);
 
+  const isQuestionVisible = useCallback(
+    (question: QuestionDto) => {
+      const rule = question.config.displayWhen;
+      if (!rule || typeof rule !== 'object') return true;
+      const { key, equals } = rule as { key?: unknown; equals?: unknown };
+      if (typeof key !== 'string') return true;
+      const source = data?.questionnaire.pages
+        .flatMap((p) => p.questions)
+        .find((q) => q.config.key === key);
+      return source ? answers[source.id] === equals : true;
+    },
+    [answers, data],
+  );
+
   const allQuestions = useMemo(
-    () => data?.questionnaire.pages.flatMap((p) => p.questions) ?? [],
-    [data],
+    () => data?.questionnaire.pages.flatMap((p) => p.questions).filter(isQuestionVisible) ?? [],
+    [data, isQuestionVisible],
   );
   const answeredCount = allQuestions.filter((q) => q.id in answers).length;
+  const requiredQuestions = allQuestions.filter((q) => q.required);
+  const requiredAnswered = requiredQuestions.filter((q) => q.id in answers).length;
   const progress = allQuestions.length > 0 ? Math.round((answeredCount / allQuestions.length) * 100) : 0;
 
-  const saveAnswer = useCallback(async (questionId: string, value: TrileanValue) => {
+  const saveAnswer = useCallback(async (questionId: string, value: AnswerValue) => {
     if (data?.readOnly) return;
     setAnswers((prev) => ({ ...prev, [questionId]: value }));
     setSaving(true);
@@ -146,7 +162,7 @@ export default function SessionFlow() {
 
   const page = data.questionnaire.pages[pageIndex];
   const isLastPage = pageIndex === data.questionnaire.pages.length - 1;
-  const allAnswered = answeredCount === allQuestions.length;
+  const allAnswered = requiredAnswered === requiredQuestions.length;
   const favoritesOk = favorites.size >= data.favoritesRule.min;
 
   return (
@@ -193,7 +209,7 @@ export default function SessionFlow() {
         {page.description && <p className="mt-1 text-slate-500">{page.description}</p>}
 
         <div className="mt-6 space-y-4">
-          {page.questions.map((q, i) => {
+          {page.questions.filter(isQuestionVisible).map((q, i) => {
             const QuestionComponent = getQuestionComponent(q.type);
             const isFav = favorites.has(q.id);
             return (

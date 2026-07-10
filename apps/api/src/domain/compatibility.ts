@@ -38,3 +38,9 @@ export function computeScore(kinds: MatchKind[]): number {
 export function isTrilean(value: unknown): value is TrileanValue {
   return value === 'YES' || value === 'POSSIBLE' || value === 'NO';
 }
+
+export function isComparableAnswer(type: string, value: unknown): value is TrileanValue {
+  if (type === 'trilean') return isTrilean(value);
+  if (type === 'yesno') return value === 'YES' || value === 'NO';
+  return false;
+}

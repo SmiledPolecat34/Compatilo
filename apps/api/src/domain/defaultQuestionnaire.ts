@@ -1,91 +1,164 @@
-/** Questionnaire de référence Compatilo (7 thèmes, 40 questions trilean). */
+/** Questionnaire de référence Compatilo conforme à la spécification produit. */
+
+export type DefaultQuestion = {
+  type: string;
+  prompt: string;
+  required?: boolean;
+  helpText?: string | null;
+  config?: Record<string, unknown>;
+};
+
+export type DefaultPage = {
+  title: string;
+  description?: string | null;
+  questions: DefaultQuestion[];
+};
+
+const key = (value: string) => ({ key: value });
+const profile = (field: string) => ({ profileField: field });
 
 export const DEFAULT_QUESTIONNAIRE = {
   title: 'Compatibilité de couple',
   description:
-    'Le questionnaire de référence Compatilo : 40 questions pour découvrir votre compatibilité.',
+    'Le questionnaire de référence Compatilo : informations personnelles, favoris et compatibilité.',
+  specVersion: 2,
   pages: [
     {
-      title: 'Vie quotidienne',
-      description: 'Vos habitudes et votre rythme de tous les jours.',
+      title: 'Informations personnelles',
       questions: [
-        'Aimerais-tu vivre ensemble dans les deux prochaines années ?',
-        'Es-tu plutôt du matin ?',
-        'Aimes-tu recevoir des amis à la maison régulièrement ?',
-        'Le partage égal des tâches ménagères est-il important pour toi ?',
-        'Pourrais-tu vivre avec un animal de compagnie ?',
-        'As-tu besoin de moments de solitude au quotidien ?',
+        {
+          type: 'text',
+          prompt: 'Prénom',
+          config: { ...key('firstName'), ...profile('firstName'), minLength: 3, maxLength: 60 },
+        },
+        {
+          type: 'text',
+          prompt: 'Surnom',
+          config: { ...key('nickname'), ...profile('nickname'), minLength: 3, maxLength: 60 },
+        },
       ],
     },
     {
-      title: 'Famille & engagement',
-      description: 'Votre vision du couple et de la famille.',
+      title: 'Réseaux sociaux',
       questions: [
-        'Souhaites-tu te marier un jour ?',
-        'Veux-tu avoir des enfants ?',
-        'La proximité avec ta belle-famille est-elle importante pour toi ?',
-        'Envisages-tu de t’engager à long terme dans cette relation ?',
-        'Serais-tu prêt·e à déménager dans une autre ville par amour ?',
-        'Les traditions familiales comptent-elles pour toi ?',
+        {
+          type: 'text',
+          prompt: 'Snapchat',
+          config: { ...key('snapchat'), ...profile('snapchat'), minLength: 3, maxLength: 60 },
+        },
+        {
+          type: 'text',
+          prompt: 'Instagram',
+          config: { ...key('instagram'), ...profile('instagram'), minLength: 3, maxLength: 60 },
+        },
+        {
+          type: 'phone',
+          prompt: 'Numéro de téléphone',
+          config: { ...key('phone'), ...profile('phone'), minLength: 3, maxLength: 30 },
+        },
       ],
     },
     {
-      title: 'Finances',
-      description: 'Votre rapport à l’argent, sans tabou.',
+      title: 'Date de naissance',
       questions: [
-        'Es-tu favorable à un compte bancaire commun ?',
-        'Es-tu plutôt économe que dépensier·ère ?',
-        'Les dépenses importantes doivent-elles être décidées à deux ?',
-        'Serais-tu à l’aise si ton/ta partenaire gagnait beaucoup plus que toi ?',
-        'Épargner régulièrement est-il une priorité pour toi ?',
+        {
+          type: 'date',
+          prompt: 'Date de naissance',
+          config: { ...key('birthDate'), ...profile('birthDate') },
+        },
       ],
     },
     {
-      title: 'Valeurs & communication',
-      description: 'Ce qui compte vraiment pour vous.',
+      title: 'Ville',
       questions: [
-        'La fidélité est-elle non négociable pour toi ?',
-        'Préfères-tu régler un désaccord immédiatement plutôt que laisser retomber ?',
-        'La spiritualité ou la religion a-t-elle une place dans ta vie ?',
-        'Peux-tu pardonner facilement ?',
-        'L’honnêteté totale est-elle plus importante que ménager l’autre ?',
-        'Es-tu à l’aise pour parler de tes émotions ?',
+        {
+          type: 'city',
+          prompt: 'Ville',
+          helpText: 'Recherche une ville, autorise la géolocalisation ou sélectionne une position.',
+          config: { ...key('city'), ...profile('location') },
+        },
       ],
     },
     {
-      title: 'Loisirs & voyages',
-      description: 'Votre manière de profiter du temps libre.',
+      title: 'Origines',
       questions: [
-        'Aimes-tu partir à l’aventure sans tout planifier ?',
-        'Préfères-tu la montagne à la plage ?',
-        'Faire du sport ensemble te plairait-il ?',
-        'Une soirée idéale peut-elle être simplement un film à la maison ?',
-        'Aimerais-tu voyager à l’étranger au moins une fois par an ?',
-        'Es-tu à l’aise avec le fait d’avoir des loisirs séparés ?',
+        {
+          type: 'origins',
+          prompt: 'Origines',
+          helpText: 'Sélectionne plusieurs origines, recherche dans la liste ou ajoute une origine personnalisée.',
+          config: { ...key('origins'), ...profile('origins') },
+        },
       ],
     },
     {
-      title: 'Intimité & affection',
-      description: 'Votre langage de l’amour.',
+      title: 'Ce qui serait possible entre nous',
       questions: [
-        'Les gestes d’affection en public te mettent-ils à l’aise ?',
-        'As-tu besoin de mots doux et de compliments réguliers ?',
-        'La tendresse au quotidien est-elle aussi importante que la passion ?',
-        'Es-tu à l’aise pour parler de tes envies et de tes limites ?',
-        'Une routine bien installée peut-elle nourrir le désir ?',
+        ...[
+          'Sorties',
+          'Appels',
+          'Se voir',
+          'Exclusivité',
+          'Cuisiner ensemble',
+          '🔞',
+          'Soutien émotionnel',
+          'Sans prise de tête',
+          'Câlins',
+          'Bisous',
+        ].map((prompt) => ({
+          type: 'trilean',
+          prompt,
+          config: key(`possible.${prompt}`),
+        })),
+        {
+          type: 'textarea',
+          prompt: 'Autres',
+          required: false,
+          config: { ...key('possible.other'), maxLength: 500 },
+        },
       ],
     },
     {
-      title: 'Projets d’avenir',
-      description: 'Là où vous voulez aller, ensemble.',
+      title: 'Permis',
       questions: [
-        'Te vois-tu vivre à l’étranger un jour ?',
-        'Préférerais-tu vivre à la campagne plutôt qu’en ville ?',
-        'La réussite professionnelle passe-t-elle avant tout le reste ?',
-        'Aimerais-tu monter un projet commun (maison, entreprise, association…) ?',
-        'Serais-tu prêt·e à faire des sacrifices personnels pour le couple ?',
-        'Imagines-tu votre relation dans dix ans ?',
+        { type: 'yesno', prompt: 'Tu as le permis ?', config: key('license') },
+        { type: 'yesno', prompt: 'Tu as le code ?', required: false, config: key('drivingCode') },
       ],
     },
-  ],
+    {
+      title: 'Cuisine',
+      questions: [
+        { type: 'yesno', prompt: 'Tu sais cuisiner ?', config: key('cooking') },
+        {
+          type: 'choice',
+          prompt: 'Tu préfères cuisiner :',
+          config: {
+            ...key('cookingPreference'),
+            options: [
+              { value: 'SWEET', label: 'Sucré' },
+              { value: 'SAVORY', label: 'Salé' },
+            ],
+            displayWhen: { key: 'cooking', equals: 'YES' },
+          },
+        },
+      ],
+    },
+    {
+      title: 'Animés',
+      questions: [{ type: 'yesno', prompt: 'Tu regardes des animés ?', config: key('anime') }],
+    },
+    {
+      title: 'Équipement',
+      questions: [
+        { type: 'yesno', prompt: 'Tu as un PC ?', config: key('pc') },
+        { type: 'yesno', prompt: 'Tu as une console ?', config: key('console') },
+      ],
+    },
+    {
+      title: 'Situation',
+      questions: [
+        { type: 'yesno', prompt: 'Tu travailles ?', config: key('work') },
+        { type: 'yesno', prompt: "Tu es à l'école ?", config: key('school') },
+      ],
+    },
+  ] as DefaultPage[],
 };

@@ -1,4 +1,11 @@
 export type TrileanValue = 'YES' | 'POSSIBLE' | 'NO';
+export type AnswerValue =
+  | TrileanValue
+  | 'SWEET'
+  | 'SAVORY'
+  | string
+  | { city: string; latitude: number | null; longitude: number | null; locationConsent: boolean }
+  | { selected: string[]; custom: string | null };
 export type MatchKind = 'MATCH' | 'PARTIAL' | 'DIFFERENCE';
 
 export interface QuestionDto {
@@ -21,7 +28,7 @@ export interface QuestionnairePayload {
   questionnaire: { title: string; description: string | null; pages: PageDto[] };
   participant: { firstName: string; slot: number; completed: boolean };
   readOnly: boolean;
-  answers: Record<string, TrileanValue>;
+  answers: Record<string, AnswerValue>;
   favorites: string[];
   favoritesRule: { min: number; max: number };
 }

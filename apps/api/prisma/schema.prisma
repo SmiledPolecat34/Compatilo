@@ -177,6 +177,11 @@ model Participant {
   slot            Int // 1 ou 2
   firstName       String
   nickname        String?
+  snapchat        String?
+  instagram       String?
+  phone           String?
+  birthDate       DateTime?
+  origins         Json?
   locationConsent Boolean     @default(false)
   city            String?
   latitude        Float? // visibles uniquement par l'admin

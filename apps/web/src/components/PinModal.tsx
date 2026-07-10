@@ -71,6 +71,14 @@ export default function PinModal({
   }
 
   async function enter(slot?: number) {
+    if (!slot && firstName.trim().length < 3) {
+      setError('Le prénom doit contenir au moins 3 caractères.');
+      return;
+    }
+    if (!slot && nickname.trim().length > 0 && nickname.trim().length < 3) {
+      setError('Le surnom doit contenir au moins 3 caractères.');
+      return;
+    }
     setLoading(true);
     setError('');
     try {
@@ -244,7 +252,7 @@ export default function PinModal({
               type="button"
               className="btn-primary w-full"
               onClick={() => enter()}
-              disabled={loading || firstName.trim().length === 0}
+              disabled={loading || firstName.trim().length < 3}
             >
               {loading ? 'Connexion…' : 'Commencer'}
             </button>

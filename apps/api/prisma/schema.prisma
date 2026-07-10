@@ -11,10 +11,8 @@ datasource db {
 }
 
 // ─────────────────────────────── Admin ───────────────────────────────
-// 2FA : méthode par défaut = code envoyé par e-mail (fonctionne sans
-// configuration préalable). L'admin peut ensuite activer le TOTP
-// (Google Authenticator, Authy...) qui devient alors la méthode active.
-// Les deux méthodes partagent le même compteur de tentatives / verrouillage.
+// 2FA : Google Authenticator / TOTP uniquement. Les anciens champs OTP e-mail
+// restent pour compatibilité de schéma, mais ne sont plus utilisés par l'API.
 
 enum TwoFactorMethod {
   EMAIL_OTP
@@ -27,7 +25,7 @@ model Admin {
   passwordHash String
   createdAt    DateTime @default(now())
 
-  twoFactorMethod    TwoFactorMethod @default(EMAIL_OTP)
+  twoFactorMethod    TwoFactorMethod @default(TOTP)
   totpSecret         String? // secret base32, actif seulement si totpEnabled
   totpEnabled        Boolean         @default(false)
   otpCodeHash        String? // code OTP en attente (e-mail), hashé

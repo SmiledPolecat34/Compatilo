@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { api, ApiError, tokens } from '../../api/client';
+import { api, tokens } from '../../api/client';
 import type { LoginChallenge, LoginSuccess } from '../../types';
 import Logo from '../../components/Logo';
 
@@ -13,8 +13,6 @@ export default function AdminLogin() {
   const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
   const [pendingToken, setPendingToken] = useState('');
-  const [method, setMethod] = useState<'EMAIL_OTP' | 'TOTP'>('EMAIL_OTP');
-  const [rememberDevice, setRememberDevice] = useState(true);
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
   const [loading, setLoading] = useState(false);
@@ -30,16 +28,11 @@ export default function AdminLogin() {
       });
       if ('requires2FA' in result) {
         setPendingToken(result.pendingToken);
-        setMethod(result.method);
         setStep('2fa');
-        setInfo(
-          result.method === 'EMAIL_OTP'
-            ? `Un code à 6 chiffres a été envoyé à ${email}.`
-            : 'Ouvre ton application d’authentification pour obtenir le code.',
-        );
+        setInfo('Ouvre Google Authenticator pour obtenir le code.');
       } else {
         tokens.set('admin', result.token);
-        navigate('/admin');
+        navigate(result.twoFactorSetupRequired ? '/admin/security' : '/admin');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur');
@@ -55,7 +48,7 @@ export default function AdminLogin() {
     try {
       const result = await api<LoginSuccess>('/api/admin/auth/verify-2fa', {
         method: 'POST',
-        body: { pendingToken, code, rememberDevice: method === 'EMAIL_OTP' && rememberDevice },
+        body: { pendingToken, code },
       });
       tokens.set('admin', result.token);
       navigate('/admin');
@@ -63,17 +56,6 @@ export default function AdminLogin() {
       setError(err instanceof Error ? err.message : 'Erreur');
     } finally {
       setLoading(false);
-    }
-  }
-
-  async function resend() {
-    setError('');
-    setInfo('');
-    try {
-      await api('/api/admin/auth/resend-otp', { method: 'POST', body: { pendingToken } });
-      setInfo('Nouveau code envoyé.');
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Erreur');
     }
   }
 
@@ -114,7 +96,7 @@ export default function AdminLogin() {
             </div>
             {error && <p className="text-sm font-medium text-rose-600">{error}</p>}
             <button type="submit" className="btn-primary w-full" disabled={loading}>
-              {loading ? 'Connexion…' : 'Continuer'}
+              {loading ? 'Connexion...' : 'Continuer'}
             </button>
           </div>
         </form>
@@ -122,7 +104,7 @@ export default function AdminLogin() {
         <form onSubmit={submitCode} className="card w-full max-w-sm p-8 animate-fade-up">
           <Logo size={38} />
           <h1 className="mt-6 font-display text-2xl font-bold text-brand-900">
-            Vérification en deux étapes
+            Google Authenticator
           </h1>
           {info && <p className="mt-2 text-sm text-slate-500">{info}</p>}
           <div className="mt-6 space-y-4">
@@ -142,39 +124,21 @@ export default function AdminLogin() {
                 required
               />
             </div>
-            {method === 'EMAIL_OTP' && (
-              <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600">
-              <input
-                type="checkbox"
-                className="h-4 w-4 accent-brand-600"
-                checked={rememberDevice}
-                onChange={(e) => setRememberDevice(e.target.checked)}
-              />
-              Mémoriser cet appareil
-              </label>
-            )}
             {error && <p className="text-sm font-medium text-rose-600">{error}</p>}
             <button
               type="submit"
               className="btn-primary w-full"
               disabled={loading || code.length !== 6}
             >
-              {loading ? 'Vérification…' : 'Valider'}
+              {loading ? 'Vérification...' : 'Valider'}
             </button>
-            <div className="flex items-center justify-between text-sm">
-              <button
-                type="button"
-                className="btn-ghost text-slate-500"
-                onClick={() => setStep('password')}
-              >
-                ← Retour
-              </button>
-              {method === 'EMAIL_OTP' && (
-                <button type="button" className="btn-ghost text-brand-700" onClick={resend}>
-                  Renvoyer le code
-                </button>
-              )}
-            </div>
+            <button
+              type="button"
+              className="btn-ghost w-full text-slate-500"
+              onClick={() => setStep('password')}
+            >
+              Retour
+            </button>
           </div>
         </form>
       )}

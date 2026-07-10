@@ -27,6 +27,7 @@ export default function SecurityPage() {
 
   async function startEnrollment() {
     setError('');
+    setCode('');
     try {
       const { secret: s, otpauthUrl } = await api<{ secret: string; otpauthUrl: string }>(
         '/api/admin/auth/2fa/totp/setup',
@@ -47,33 +48,12 @@ export default function SecurityPage() {
       await api('/api/admin/auth/2fa/totp/enable', { method: 'POST', body: { code }, auth: 'admin' });
       setEnrolling(false);
       setCode('');
-      toast.success('Application d’authentification activée.');
+      toast.success('Google Authenticator activé.');
       load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur');
     } finally {
       setLoading(false);
-    }
-  }
-
-  async function disableTotp() {
-    if (!window.confirm('Revenir au code envoyé par e-mail comme méthode de connexion ?')) return;
-    try {
-      await api('/api/admin/auth/2fa/totp/disable', { method: 'POST', auth: 'admin' });
-      toast.success('Retour au code par e-mail.');
-      load();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Erreur');
-    }
-  }
-
-  async function revokeDevice(id: string) {
-    try {
-      await api(`/api/admin/auth/2fa/trusted-devices/${id}`, { method: 'DELETE', auth: 'admin' });
-      toast.success('Appareil révoqué.');
-      load();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Erreur');
     }
   }
 
@@ -111,20 +91,14 @@ export default function SecurityPage() {
         <h2 className="font-display text-lg font-bold text-brand-900">
           Authentification à deux facteurs
         </h2>
-        <p className="mt-1 text-sm text-slate-500">
-          Méthode active : {status.method === 'TOTP' ? 'application d’authentification' : 'code par e-mail'}
-        </p>
+        <p className="mt-1 text-sm text-slate-500">Méthode active : Google Authenticator</p>
 
-        {status.totpEnabled ? (
-          <button type="button" className="btn-secondary mt-4" onClick={disableTotp}>
-            Désactiver l'application d'authentification
-          </button>
-        ) : enrolling ? (
+        {enrolling ? (
           <div className="mt-4 max-w-sm space-y-3">
             <p className="text-sm text-slate-600">
               Scanne ce QR code avec Google Authenticator, Authy ou une app compatible TOTP.
             </p>
-            {qrDataUrl && <img src={qrDataUrl} alt="QR code d'enrôlement TOTP" className="h-auto max-w-full rounded-lg" />}
+            {qrDataUrl && <img src={qrDataUrl} alt="QR code Google Authenticator" className="h-auto max-w-full rounded-lg" />}
             <p className="break-all rounded-lg bg-brand-50 p-2 text-xs text-slate-500">{secret}</p>
             <input
               className="input text-center text-xl font-bold tracking-[0.3em]"
@@ -149,36 +123,19 @@ export default function SecurityPage() {
               </button>
             </div>
           </div>
+        ) : status.totpEnabled ? (
+          <div className="mt-4 space-y-3">
+            <p className="text-sm text-slate-600">
+              Google Authenticator est activé pour les connexions administrateur.
+            </p>
+            <button type="button" className="btn-secondary" onClick={startEnrollment}>
+              Reconfigurer Google Authenticator
+            </button>
+          </div>
         ) : (
           <button type="button" className="btn-primary mt-4" onClick={startEnrollment}>
-            Activer une application d'authentification
+            Activer Google Authenticator
           </button>
-        )}
-      </section>
-
-      <section className="card p-4 sm:p-6">
-        <h2 className="font-display text-lg font-bold text-brand-900">Appareils de confiance</h2>
-        <p className="mt-1 text-sm text-slate-500">
-          Mémorisés jusqu'à {status.trustedDeviceDays} jours — le code e-mail est sauté sur ces appareils.
-        </p>
-        {status.trustedDevices.length === 0 ? (
-          <p className="mt-4 text-slate-500">Aucun appareil mémorisé.</p>
-        ) : (
-          <div className="mt-4 space-y-2">
-            {status.trustedDevices.map((d) => (
-              <div key={d.id} className="grid gap-3 rounded-lg border border-brand-100 p-3 text-sm sm:flex sm:items-center sm:justify-between">
-                <div className="min-w-0">
-                  <p className="font-medium text-slate-700">{d.label || 'Appareil inconnu'}</p>
-                  <p className="text-xs text-slate-500">
-                    Dernière utilisation : {new Date(d.lastUsedAt).toLocaleString('fr-FR')}
-                  </p>
-                </div>
-                <button type="button" className="btn-ghost text-rose-500" onClick={() => revokeDevice(d.id)}>
-                  Révoquer
-                </button>
-              </div>
-            ))}
-          </div>
         )}
       </section>
 

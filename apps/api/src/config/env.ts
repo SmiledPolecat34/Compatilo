@@ -20,8 +20,8 @@ const schema = z.object({
   TOTP_ISSUER: z.string().default('Compatilo'),
   TRUSTED_DEVICE_DAYS: z.coerce.number().min(1).max(365).default(30),
 
-  // Envoi d'e-mail (code OTP). Sans configuration SMTP, le code est
-  // simplement journalisé en développement.
+  // Envoi d'e-mail applicatif. La connexion admin n'utilise plus de code
+  // par e-mail : le second facteur est uniquement Google Authenticator.
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().default(587),
   SMTP_USER: z.string().optional(),

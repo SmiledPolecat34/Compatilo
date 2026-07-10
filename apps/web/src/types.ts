@@ -178,7 +178,7 @@ export interface EditorPage {
 
 // ── 2FA ────────────────────────────────────────────────────────────────
 
-export type TwoFactorMethod = 'EMAIL_OTP' | 'TOTP';
+export type TwoFactorMethod = 'TOTP';
 
 export interface LoginChallenge {
   requires2FA: true;
@@ -190,6 +190,7 @@ export interface LoginSuccess {
   token: string;
   email: string;
   twoFactorSkipped?: boolean;
+  twoFactorSetupRequired?: boolean;
 }
 
 export interface TrustedDeviceDto {
@@ -203,8 +204,6 @@ export interface TrustedDeviceDto {
 export interface TwoFactorStatus {
   method: TwoFactorMethod;
   totpEnabled: boolean;
-  trustedDeviceDays: number;
-  trustedDevices: TrustedDeviceDto[];
 }
 
 // ── Musique ──────────────────────────────────────────────────────────────

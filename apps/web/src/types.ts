@@ -75,17 +75,21 @@ export interface ReportPayload {
 
 // ── Admin ──────────────────────────────────────────────────────────────
 
+export type IdentityDisplayMode = 'FIRST_NAME' | 'NICKNAME' | 'BOTH' | 'NONE';
+
 export interface SessionSummary {
   id: string;
   publicId: string;
   label: string | null;
   status: string;
   reportAccessEnabled: boolean;
+  identityDisplay: IdentityDisplayMode;
   expiresAt: string | null;
   createdAt: string;
   questionnaire: string;
   participants: { slot: number; firstName: string; nickname: string | null; completed: boolean }[];
   report: { code: string; score: number } | null;
+  playlist: { id: string; name: string } | null;
 }
 
 export interface SessionDetail {
@@ -94,6 +98,8 @@ export interface SessionDetail {
   label: string | null;
   status: string;
   reportAccessEnabled: boolean;
+  identityDisplay: IdentityDisplayMode;
+  playlist: { id: string; name: string } | null;
   expiresAt: string | null;
   privateNotes: string | null;
   createdAt: string;
@@ -157,4 +163,50 @@ export interface EditorPage {
   description?: string | null;
   isActive: boolean;
   questions: EditorQuestion[];
+}
+
+// ── 2FA ────────────────────────────────────────────────────────────────
+
+export type TwoFactorMethod = 'EMAIL_OTP' | 'TOTP';
+
+export interface LoginChallenge {
+  requires2FA: true;
+  method: TwoFactorMethod;
+  pendingToken: string;
+}
+
+export interface LoginSuccess {
+  token: string;
+  email: string;
+  twoFactorSkipped?: boolean;
+}
+
+export interface TrustedDeviceDto {
+  id: string;
+  label: string | null;
+  createdAt: string;
+  lastUsedAt: string;
+  expiresAt: string;
+}
+
+export interface TwoFactorStatus {
+  method: TwoFactorMethod;
+  totpEnabled: boolean;
+  trustedDeviceDays: number;
+  trustedDevices: TrustedDeviceDto[];
+}
+
+// ── Musique ──────────────────────────────────────────────────────────────
+
+export interface PlaylistSummary {
+  id: string;
+  name: string;
+  isDefault: boolean;
+  trackCount: number;
+}
+
+export interface MusicSettingsDto {
+  id: string;
+  enabled: boolean;
+  defaultPlaylistId: string | null;
 }

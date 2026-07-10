@@ -11,12 +11,45 @@ datasource db {
 }
 
 // ─────────────────────────────── Admin ───────────────────────────────
+// 2FA : méthode par défaut = code envoyé par e-mail (fonctionne sans
+// configuration préalable). L'admin peut ensuite activer le TOTP
+// (Google Authenticator, Authy...) qui devient alors la méthode active.
+// Les deux méthodes partagent le même compteur de tentatives / verrouillage.
+
+enum TwoFactorMethod {
+  EMAIL_OTP
+  TOTP
+}
 
 model Admin {
   id           String   @id @default(cuid())
   email        String   @unique
   passwordHash String
   createdAt    DateTime @default(now())
+
+  twoFactorMethod    TwoFactorMethod @default(EMAIL_OTP)
+  totpSecret         String? // secret base32, actif seulement si totpEnabled
+  totpEnabled        Boolean         @default(false)
+  otpCodeHash        String? // code OTP en attente (e-mail), hashé
+  otpExpiresAt       DateTime?
+  otpAttempts        Int             @default(0)
+  otpLockedUntil     DateTime?
+
+  trustedDevices TrustedDevice[]
+}
+
+// Permet de sauter le 2FA pendant une durée configurable (TRUSTED_DEVICE_DAYS).
+model TrustedDevice {
+  id         String   @id @default(cuid())
+  adminId    String
+  admin      Admin    @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  tokenHash  String   @unique // sha256 du jeton stocké dans le cookie
+  label      String? // ex. dérivé du user-agent
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  lastUsedAt DateTime @default(now())
+
+  @@index([adminId])
 }
 
 // ──────────────────────────── Questionnaire ──────────────────────────
@@ -93,6 +126,14 @@ enum SessionStatus {
   ARCHIVED
 }
 
+// Ce que l'invité voit du nom d'un participant (l'admin voit toujours tout).
+enum IdentityDisplay {
+  FIRST_NAME
+  NICKNAME
+  BOTH
+  NONE // réservé : anonymisation complète ("Participant 1/2")
+}
+
 model Session {
   id                  String               @id @default(cuid())
   publicId            String               @unique // identifiant non prévisible (nanoid)
@@ -104,6 +145,9 @@ model Session {
   version             QuestionnaireVersion @relation(fields: [versionId], references: [id])
   expiresAt           DateTime?
   reportAccessEnabled Boolean              @default(true)
+  identityDisplay     IdentityDisplay      @default(BOTH)
+  playlistId          String?
+  playlist            Playlist?            @relation(fields: [playlistId], references: [id], onDelete: SetNull)
   privateNotes        String?
   failedAttempts      Int                  @default(0)
   lockedUntil         DateTime?
@@ -183,6 +227,60 @@ model Signature {
   signedAt      DateTime    @default(now())
 
   @@unique([reportId, participantId])
+}
+
+// ─────────────────────────────── Musique ──────────────────────────────
+// Module indépendant du reste de l'application (Provider pattern) :
+// aujourd'hui LOCAL (fichiers hébergés) et YOUTUBE (métadonnées oEmbed +
+// lecture via le lecteur officiel YouTube). Ajouter Spotify/Deezer/etc.
+// plus tard = un nouveau TrackType + un provider front, sans migration
+// de structure ni changement des autres modules.
+
+enum TrackType {
+  LOCAL
+  YOUTUBE
+}
+
+model Playlist {
+  id        String          @id @default(cuid())
+  name      String
+  isDefault Boolean         @default(false)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  tracks    PlaylistTrack[]
+  sessions  Session[]
+}
+
+model Track {
+  id              String          @id @default(cuid())
+  type            TrackType
+  title           String
+  artist          String?
+  durationSeconds Int?
+  fileKey         String? // LOCAL : chemin relatif dans le stockage
+  youtubeVideoId  String? // YOUTUBE
+  thumbnailUrl    String?
+  createdAt       DateTime        @default(now())
+  playlists       PlaylistTrack[]
+}
+
+model PlaylistTrack {
+  id         String   @id @default(cuid())
+  playlistId String
+  playlist   Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  trackId    String
+  track      Track    @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  position   Int
+
+  @@unique([playlistId, trackId])
+  @@index([playlistId, position])
+}
+
+// Réglages globaux (ligne unique, id fixe "singleton").
+model MusicSettings {
+  id                String  @id @default("singleton")
+  enabled           Boolean @default(true)
+  defaultPlaylistId String?
 }
 
 // ─────────────────────────────── Timeline ────────────────────────────

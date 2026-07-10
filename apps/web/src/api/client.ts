@@ -2,6 +2,11 @@
 
 const API_BASE = import.meta.env.VITE_API_URL ?? '';
 
+/** URL absolue vers une ressource servie par l'API (ex. fichier audio). */
+export function apiUrl(path: string): string {
+  return `${API_BASE}${path}`;
+}
+
 export class ApiError extends Error {
   constructor(
     public readonly status: number,
@@ -42,6 +47,25 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
     body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
   });
 
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new ApiError(res.status, data.error ?? 'Une erreur est survenue.', data.code);
+  }
+  return data as T;
+}
+
+/** Upload multipart (ex. fichier audio) — auth admin uniquement pour l'instant. */
+export async function apiUpload<T>(path: string, formData: FormData): Promise<T> {
+  const headers: Record<string, string> = {};
+  const token = tokens.get('admin');
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: 'POST',
+    headers,
+    credentials: 'include',
+    body: formData,
+  });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     throw new ApiError(res.status, data.error ?? 'Une erreur est survenue.', data.code);

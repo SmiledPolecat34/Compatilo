@@ -1,7 +1,14 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../../api/client';
-import type { QuestionnaireListItem, SessionSummary } from '../../types';
+import type { IdentityDisplayMode, PlaylistSummary, QuestionnaireListItem, SessionSummary } from '../../types';
+
+const IDENTITY_LABELS: Record<IdentityDisplayMode, string> = {
+  FIRST_NAME: 'Prénom',
+  NICKNAME: 'Surnom',
+  BOTH: 'Prénom + surnom',
+  NONE: 'Aucun (anonyme)',
+};
 
 interface CreatedSession {
   id: string;
@@ -136,6 +143,9 @@ function CreateSessionModal({
   const [expiresInDays, setExpiresInDays] = useState<number | ''>('');
   const [questionnaires, setQuestionnaires] = useState<QuestionnaireListItem[]>([]);
   const [questionnaireId, setQuestionnaireId] = useState('');
+  const [identityDisplay, setIdentityDisplay] = useState<IdentityDisplayMode>('BOTH');
+  const [playlists, setPlaylists] = useState<PlaylistSummary[]>([]);
+  const [playlistId, setPlaylistId] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -143,6 +153,7 @@ function CreateSessionModal({
     api<QuestionnaireListItem[]>('/api/admin/questionnaires', { auth: 'admin' }).then((list) =>
       setQuestionnaires(list.filter((q) => q.versions.some((v) => v.status === 'PUBLISHED'))),
     );
+    api<PlaylistSummary[]>('/api/admin/music/playlists', { auth: 'admin' }).then(setPlaylists);
   }, []);
 
   async function create() {
@@ -155,6 +166,8 @@ function CreateSessionModal({
           label: label.trim() || undefined,
           questionnaireId: questionnaireId || undefined,
           expiresInDays: expiresInDays === '' ? undefined : expiresInDays,
+          identityDisplay,
+          playlistId: playlistId || undefined,
         },
         auth: 'admin',
       });
@@ -213,6 +226,46 @@ function CreateSessionModal({
             onChange={(e) => setExpiresInDays(e.target.value === '' ? '' : Number(e.target.value))}
             placeholder="Jamais"
           />
+        </div>
+        <div>
+          <span className="label">Nom affiché à l'invité</span>
+          <div className="grid grid-cols-2 gap-2">
+            {(Object.keys(IDENTITY_LABELS) as IdentityDisplayMode[]).map((mode) => (
+              <label
+                key={mode}
+                className={`flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-sm ${
+                  identityDisplay === mode ? 'border-brand-400 bg-brand-50 font-semibold text-brand-700' : 'border-brand-100 text-slate-600'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="identityDisplay"
+                  className="accent-brand-600"
+                  checked={identityDisplay === mode}
+                  onChange={() => setIdentityDisplay(mode)}
+                />
+                {IDENTITY_LABELS[mode]}
+              </label>
+            ))}
+          </div>
+        </div>
+        <div>
+          <label className="label" htmlFor="playlist">
+            Playlist (optionnel)
+          </label>
+          <select
+            id="playlist"
+            className="input"
+            value={playlistId}
+            onChange={(e) => setPlaylistId(e.target.value)}
+          >
+            <option value="">Playlist par défaut</option>
+            {playlists.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
         </div>
         {error && <p className="text-sm font-medium text-rose-600">{error}</p>}
         <button type="button" className="btn-primary w-full" onClick={create} disabled={loading}>
@@ -275,7 +328,10 @@ export function Modal({
       aria-modal="true"
       aria-label={title}
     >
-      <div className="card max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-b-none p-6 sm:rounded-3xl animate-fade-up">
+      <div
+        className="card max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-b-none p-6 sm:rounded-3xl animate-fade-up"
+        style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}
+      >
         <div className="mb-4 flex items-start justify-between">
           <h2 className="font-display text-xl font-bold text-brand-900">{title}</h2>
           <button type="button" className="btn-ghost -mr-2 text-slate-400" onClick={onClose} aria-label="Fermer">

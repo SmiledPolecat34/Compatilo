@@ -39,6 +39,15 @@ export default function AdminLayout() {
           <NavLink to="/admin/questionnaires" className={linkClass}>
             Questionnaires
           </NavLink>
+          <NavLink to="/admin/music" className={linkClass}>
+            Musique
+          </NavLink>
+          <NavLink to="/admin/stats" className={linkClass}>
+            Statistiques
+          </NavLink>
+          <NavLink to="/admin/security" className={linkClass}>
+            Sécurité
+          </NavLink>
           <button type="button" className="btn-ghost text-slate-400" onClick={logout}>
             Déconnexion
           </button>

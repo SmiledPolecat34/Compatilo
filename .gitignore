@@ -6,4 +6,5 @@ dist/
 .DS_Store
 coverage/
 apps/api/prisma/dev.db
+apps/api/uploads/
 .claude

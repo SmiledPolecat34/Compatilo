@@ -15,6 +15,22 @@ const schema = z.object({
   WEB_ORIGIN: z.string().url().default('http://localhost:5173'),
   PORT: z.coerce.number().default(4000),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+
+  // 2FA
+  TOTP_ISSUER: z.string().default('Compatilo'),
+  TRUSTED_DEVICE_DAYS: z.coerce.number().min(1).max(365).default(30),
+
+  // Envoi d'e-mail (code OTP). Sans configuration SMTP, le code est
+  // simplement journalisé en développement.
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().default(587),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  SMTP_FROM: z.string().default('Compatilo <no-reply@compatilo.app>'),
+
+  // Stockage des fichiers audio uploadés (musique)
+  MUSIC_UPLOAD_DIR: z.string().default('uploads/audio'),
+  MUSIC_MAX_FILE_MB: z.coerce.number().default(25),
 });
 
 const parsed = schema.safeParse(process.env);

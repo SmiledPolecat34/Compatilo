@@ -1,8 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../../api/client';
-import type { SessionDetail, TimelineEvent } from '../../types';
+import type { IdentityDisplayMode, PlaylistSummary, SessionDetail, TimelineEvent } from '../../types';
 import ReportView from '../../components/report/ReportView';
+
+const IDENTITY_LABELS: Record<IdentityDisplayMode, string> = {
+  FIRST_NAME: 'Prénom',
+  NICKNAME: 'Surnom',
+  BOTH: 'Prénom + surnom',
+  NONE: 'Aucun (anonyme)',
+};
 
 const EVENT_ICONS: Record<string, string> = {
   'session.created': '✨',
@@ -24,6 +31,7 @@ export default function SessionDetailPage() {
   const navigate = useNavigate();
   const [session, setSession] = useState<SessionDetail | null>(null);
   const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
+  const [playlists, setPlaylists] = useState<PlaylistSummary[]>([]);
   const [notes, setNotes] = useState('');
   const [notesSaved, setNotesSaved] = useState(true);
   const [showReport, setShowReport] = useState(false);
@@ -39,6 +47,9 @@ export default function SessionDetailPage() {
   }, [id]);
 
   useEffect(load, [load]);
+  useEffect(() => {
+    api<PlaylistSummary[]>('/api/admin/music/playlists', { auth: 'admin' }).then(setPlaylists);
+  }, []);
 
   function saveNotes(value: string) {
     setNotes(value);
@@ -59,6 +70,24 @@ export default function SessionDetailPage() {
     await api(`/api/admin/sessions/${id}`, {
       method: 'PATCH',
       body: { reportAccessEnabled: !session.reportAccessEnabled },
+      auth: 'admin',
+    });
+    load();
+  }
+
+  async function updateIdentityDisplay(mode: IdentityDisplayMode) {
+    await api(`/api/admin/sessions/${id}`, {
+      method: 'PATCH',
+      body: { identityDisplay: mode },
+      auth: 'admin',
+    });
+    load();
+  }
+
+  async function updatePlaylist(newPlaylistId: string) {
+    await api(`/api/admin/sessions/${id}`, {
+      method: 'PATCH',
+      body: { playlistId: newPlaylistId || null },
       auth: 'admin',
     });
     load();
@@ -183,6 +212,44 @@ export default function SessionDetailPage() {
         </div>
 
         <div className="space-y-6">
+          {/* Réglages */}
+          <section className="card p-6">
+            <h2 className="mb-4 font-display text-lg font-bold text-brand-900">Réglages</h2>
+            <div className="space-y-4">
+              <div>
+                <span className="label">Nom affiché à l'invité</span>
+                <select
+                  className="input"
+                  value={session.identityDisplay}
+                  onChange={(e) => updateIdentityDisplay(e.target.value as IdentityDisplayMode)}
+                  aria-label="Nom affiché à l'invité"
+                >
+                  {(Object.keys(IDENTITY_LABELS) as IdentityDisplayMode[]).map((mode) => (
+                    <option key={mode} value={mode}>
+                      {IDENTITY_LABELS[mode]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <span className="label">Playlist</span>
+                <select
+                  className="input"
+                  value={session.playlist?.id ?? ''}
+                  onChange={(e) => updatePlaylist(e.target.value)}
+                  aria-label="Playlist de la session"
+                >
+                  <option value="">Playlist par défaut</option>
+                  {playlists.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </section>
+
           {/* Notes privées */}
           <section className="card p-6">
             <div className="mb-3 flex items-center justify-between">

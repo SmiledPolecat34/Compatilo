@@ -8,8 +8,9 @@ import { badRequest, forbidden, notFound, tooMany } from '../lib/errors.js';
 import { requireParticipant } from '../middleware/auth.js';
 import { validateBody } from '../middleware/validate.js';
 import { logEvent } from '../services/timeline.js';
-import { generateReport } from '../services/report.js';
+import { applyIdentityDisplay, generateReport, type ReportData } from '../services/report.js';
 import { isTrilean } from '../domain/compatibility.js';
+import { computeDisplayName, type IdentityDisplayMode } from '../domain/identity.js';
 
 export const publicRouter = Router();
 
@@ -68,14 +69,15 @@ async function findSessionByPin(pin: string) {
 publicRouter.post('/join/check', pinLimiter, validateBody(pinSchema), async (req, res, next) => {
   try {
     const session = await findSessionByPin(req.body.pin);
+    const mode = session.identityDisplay as IdentityDisplayMode;
     res.json({
       label: session.label,
       completed: session.status === 'COMPLETED',
       reportAccessEnabled: session.reportAccessEnabled,
       participants: session.participants.map((p) => ({
         slot: p.slot,
-        firstName: p.firstName,
-        nickname: p.nickname,
+        firstName: computeDisplayName(mode, p.firstName, p.nickname, p.slot),
+        nickname: null,
         completed: Boolean(p.completedAt),
       })),
     });
@@ -356,8 +358,14 @@ publicRouter.get('/me/report', requireParticipant, async (req, res, next) => {
         participants: { orderBy: { slot: 'asc' } },
       },
     });
+    const mode = session.identityDisplay as IdentityDisplayMode;
     if (!session.report) {
-      res.json({ ready: false, waitingFor: session.participants.filter((p) => !p.completedAt).map((p) => p.firstName) });
+      res.json({
+        ready: false,
+        waitingFor: session.participants
+          .filter((p) => !p.completedAt)
+          .map((p) => computeDisplayName(mode, p.firstName, p.nickname, p.slot)),
+      });
       return;
     }
     if (!session.reportAccessEnabled) {
@@ -369,7 +377,7 @@ publicRouter.get('/me/report', requireParticipant, async (req, res, next) => {
         code: session.report.code,
         score: session.report.score,
         generatedAt: session.report.generatedAt,
-        data: session.report.data,
+        data: applyIdentityDisplay(session.report.data as unknown as ReportData, mode),
         signatures: session.report.signatures.map((s) => ({
           participantId: s.participantId,
           image: s.image,

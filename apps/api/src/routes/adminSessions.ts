@@ -17,11 +17,13 @@ function sessionSummary(s: {
   label: string | null;
   status: string;
   reportAccessEnabled: boolean;
+  identityDisplay: string;
   expiresAt: Date | null;
   createdAt: Date;
   participants: { slot: number; firstName: string; nickname: string | null; completedAt: Date | null }[];
   report: { code: string; score: number } | null;
   version: { version: number; questionnaire: { title: string } };
+  playlist: { id: string; name: string } | null;
 }) {
   return {
     id: s.id,
@@ -29,6 +31,7 @@ function sessionSummary(s: {
     label: s.label,
     status: s.status,
     reportAccessEnabled: s.reportAccessEnabled,
+    identityDisplay: s.identityDisplay,
     expiresAt: s.expiresAt,
     createdAt: s.createdAt,
     questionnaire: `${s.version.questionnaire.title} (v${s.version.version})`,
@@ -39,6 +42,7 @@ function sessionSummary(s: {
       completed: Boolean(p.completedAt),
     })),
     report: s.report ? { code: s.report.code, score: s.report.score } : null,
+    playlist: s.playlist,
   };
 }
 
@@ -46,6 +50,7 @@ const listInclude = {
   participants: { orderBy: { slot: 'asc' as const } },
   report: { select: { code: true, score: true } },
   version: { select: { version: true, questionnaire: { select: { title: true } } } },
+  playlist: { select: { id: true, name: true } },
 };
 
 // ── Liste + recherche (prénom, surnom, PIN, identifiant du rapport) ──
@@ -76,21 +81,30 @@ adminSessionsRouter.get('/', async (req, res, next) => {
 });
 
 // ── Création : PIN 6 chiffres + lien d'invitation ────────────────────
+const identityDisplaySchema = z.enum(['FIRST_NAME', 'NICKNAME', 'BOTH', 'NONE']);
+
 const createSchema = z.object({
   label: z.string().trim().max(120).optional(),
   questionnaireId: z.string().optional(),
   expiresInDays: z.number().int().min(1).max(365).optional(),
+  identityDisplay: identityDisplaySchema.default('BOTH'),
+  playlistId: z.string().nullable().optional(),
 });
 
 adminSessionsRouter.post('/', validateBody(createSchema), async (req, res, next) => {
   try {
-    const { label, questionnaireId, expiresInDays } = req.body;
+    const { label, questionnaireId, expiresInDays, identityDisplay, playlistId } = req.body;
 
     const version = await prisma.questionnaireVersion.findFirst({
       where: { status: 'PUBLISHED', ...(questionnaireId ? { questionnaireId } : {}) },
       orderBy: [{ publishedAt: 'desc' }],
     });
     if (!version) throw badRequest('Aucun questionnaire publié. Publie une version d’abord.');
+
+    if (playlistId) {
+      const playlist = await prisma.playlist.findUnique({ where: { id: playlistId } });
+      if (!playlist) throw badRequest('Playlist introuvable.');
+    }
 
     // Génère un PIN unique (l'unicité de pinLookup est garantie en base)
     let pin = generatePin();
@@ -107,6 +121,8 @@ adminSessionsRouter.post('/', validateBody(createSchema), async (req, res, next)
         pinHash: await hashPin(pin),
         pinLookup: pinLookup(pin),
         versionId: version.id,
+        identityDisplay,
+        playlistId: playlistId || null,
         expiresAt: expiresInDays
           ? new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000)
           : null,
@@ -159,6 +175,8 @@ adminSessionsRouter.get('/:id', async (req, res, next) => {
       label: s.label,
       status: s.status,
       reportAccessEnabled: s.reportAccessEnabled,
+      identityDisplay: s.identityDisplay,
+      playlist: s.playlist,
       expiresAt: s.expiresAt,
       privateNotes: s.privateNotes,
       createdAt: s.createdAt,
@@ -203,6 +221,8 @@ const patchSchema = z.object({
   label: z.string().trim().max(120).nullable().optional(),
   privateNotes: z.string().max(10_000).nullable().optional(),
   reportAccessEnabled: z.boolean().optional(),
+  identityDisplay: identityDisplaySchema.optional(),
+  playlistId: z.string().nullable().optional(),
   expiresAt: z.string().datetime().nullable().optional(),
 });
 
@@ -211,13 +231,22 @@ adminSessionsRouter.patch('/:id', validateBody(patchSchema), async (req, res, ne
     const existing = await prisma.session.findUnique({ where: { id: req.params.id } });
     if (!existing) throw notFound();
 
-    const { label, privateNotes, reportAccessEnabled, expiresAt } = req.body;
+    const { label, privateNotes, reportAccessEnabled, identityDisplay, playlistId, expiresAt } =
+      req.body;
+
+    if (playlistId) {
+      const playlist = await prisma.playlist.findUnique({ where: { id: playlistId } });
+      if (!playlist) throw badRequest('Playlist introuvable.');
+    }
+
     const session = await prisma.session.update({
       where: { id: req.params.id },
       data: {
         ...(label !== undefined ? { label } : {}),
         ...(privateNotes !== undefined ? { privateNotes } : {}),
         ...(reportAccessEnabled !== undefined ? { reportAccessEnabled } : {}),
+        ...(identityDisplay !== undefined ? { identityDisplay } : {}),
+        ...(playlistId !== undefined ? { playlistId: playlistId || null } : {}),
         ...(expiresAt !== undefined ? { expiresAt: expiresAt ? new Date(expiresAt) : null } : {}),
       },
     });

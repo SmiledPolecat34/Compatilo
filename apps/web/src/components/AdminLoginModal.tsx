@@ -1,12 +1,11 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { api, ApiError, tokens } from '../../api/client';
-import type { LoginChallenge, LoginSuccess } from '../../types';
-import Logo from '../../components/Logo';
+import { api, tokens } from '../api/client';
+import type { LoginChallenge, LoginSuccess } from '../types';
 
 type Step = 'password' | '2fa';
 
-export default function AdminLogin() {
+export default function AdminLoginModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const navigate = useNavigate();
   const [step, setStep] = useState<Step>('password');
   const [email, setEmail] = useState('');
@@ -18,6 +17,19 @@ export default function AdminLogin() {
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setStep('password');
+      setEmail('');
+      setPassword('');
+      setCode('');
+      setError('');
+      setInfo('');
+    }
+  }, [open]);
+
+  if (!open) return null;
 
   async function submitPassword(e: FormEvent) {
     e.preventDefault();
@@ -39,6 +51,7 @@ export default function AdminLogin() {
         );
       } else {
         tokens.set('admin', result.token);
+        onClose();
         navigate('/admin');
       }
     } catch (err) {
@@ -58,6 +71,7 @@ export default function AdminLogin() {
         body: { pendingToken, code, rememberDevice },
       });
       tokens.set('admin', result.token);
+      onClose();
       navigate('/admin');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur');
@@ -73,37 +87,59 @@ export default function AdminLogin() {
       await api('/api/admin/auth/resend-otp', { method: 'POST', body: { pendingToken } });
       setInfo('Nouveau code envoyé.');
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Erreur');
+      setError(err instanceof Error ? err.message : 'Erreur');
     }
   }
 
   return (
-    <div className="flex min-h-dvh items-center justify-center px-6">
-      {step === 'password' ? (
-        <form onSubmit={submitPassword} className="card w-full max-w-sm p-8 animate-fade-up">
-          <Logo size={38} />
-          <h1 className="mt-6 font-display text-2xl font-bold text-brand-900">Administration</h1>
-          <div className="mt-6 space-y-4">
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-brand-900/40 backdrop-blur-sm sm:items-center animate-fade-in"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Connexion administrateur"
+    >
+      <div
+        className="card w-full max-w-sm rounded-b-none p-6 sm:rounded-3xl sm:p-8 animate-fade-up"
+        style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}
+      >
+        <div className="flex items-start justify-between">
+          <h2 className="font-display text-2xl font-bold text-brand-900">
+            {step === 'password' ? 'Administration' : 'Vérification en deux étapes'}
+          </h2>
+          <button
+            type="button"
+            className="btn-ghost -mr-2 -mt-1 text-slate-400"
+            onClick={onClose}
+            aria-label="Fermer"
+          >
+            ✕
+          </button>
+        </div>
+
+        {step === 'password' ? (
+          <form onSubmit={submitPassword} className="mt-5 space-y-4">
             <div>
-              <label className="label" htmlFor="email">
+              <label className="label" htmlFor="admin-email">
                 Email
               </label>
               <input
-                id="email"
+                id="admin-email"
                 type="email"
                 className="input"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="username"
+                autoFocus
                 required
               />
             </div>
             <div>
-              <label className="label" htmlFor="password">
+              <label className="label" htmlFor="admin-password">
                 Mot de passe
               </label>
               <input
-                id="password"
+                id="admin-password"
                 type="password"
                 className="input"
                 value={password}
@@ -116,22 +152,16 @@ export default function AdminLogin() {
             <button type="submit" className="btn-primary w-full" disabled={loading}>
               {loading ? 'Connexion…' : 'Continuer'}
             </button>
-          </div>
-        </form>
-      ) : (
-        <form onSubmit={submitCode} className="card w-full max-w-sm p-8 animate-fade-up">
-          <Logo size={38} />
-          <h1 className="mt-6 font-display text-2xl font-bold text-brand-900">
-            Vérification en deux étapes
-          </h1>
-          {info && <p className="mt-2 text-sm text-slate-500">{info}</p>}
-          <div className="mt-6 space-y-4">
+          </form>
+        ) : (
+          <form onSubmit={submitCode} className="mt-5 space-y-4">
+            {info && <p className="text-sm text-slate-500">{info}</p>}
             <div>
-              <label className="label" htmlFor="code">
+              <label className="label" htmlFor="admin-code">
                 Code à 6 chiffres
               </label>
               <input
-                id="code"
+                id="admin-code"
                 className="input text-center text-2xl font-bold tracking-[0.4em]"
                 inputMode="numeric"
                 autoComplete="one-time-code"
@@ -173,9 +203,9 @@ export default function AdminLogin() {
                 </button>
               )}
             </div>
-          </div>
-        </form>
-      )}
+          </form>
+        )}
+      </div>
     </div>
   );
 }

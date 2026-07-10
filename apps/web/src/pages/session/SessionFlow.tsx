@@ -219,7 +219,10 @@ export default function SessionFlow() {
       </main>
 
       {/* Navigation */}
-      <footer className="fixed inset-x-0 bottom-0 border-t border-brand-100 bg-white/90 p-4 backdrop-blur">
+      <footer
+        className="fixed inset-x-0 bottom-0 border-t border-brand-100 bg-white/90 p-4 backdrop-blur"
+        style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+      >
         <div className="mx-auto flex max-w-2xl items-center gap-3">
           <button
             type="button"

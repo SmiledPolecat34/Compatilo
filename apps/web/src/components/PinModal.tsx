@@ -127,6 +127,7 @@ export default function PinModal({
       <div
         ref={dialogRef}
         className="card w-full max-w-md rounded-b-none p-6 sm:rounded-3xl sm:p-8 animate-fade-up"
+        style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}
       >
         <div className="flex items-start justify-between">
           <h2 className="font-display text-2xl font-bold text-brand-900">

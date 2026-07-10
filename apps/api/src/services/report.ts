@@ -2,6 +2,7 @@ import type { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import { generateReportCode } from '../lib/crypto.js';
 import { logEvent } from './timeline.js';
+import { computeDisplayName, type IdentityDisplayMode } from '../domain/identity.js';
 import {
   compareAnswers,
   computeScore,
@@ -25,6 +26,26 @@ export interface PageResult {
   title: string;
   score: number;
   results: QuestionResult[];
+}
+
+export interface ReportParticipant {
+  id: string;
+  slot: number;
+  firstName: string;
+  nickname: string | null;
+  city: string | null;
+  completedAt: Date | string;
+  favorites: string[];
+}
+
+export interface ReportData {
+  session: { publicId: string; label: string | null };
+  participants: ReportParticipant[];
+  score: number;
+  counts: { match: number; partial: number; difference: number; total: number };
+  pages: PageResult[];
+  tags: string[];
+  summary: string;
 }
 
 /** Génère le rapport quand les deux participants ont terminé. Idempotent. */
@@ -152,7 +173,7 @@ function buildTags(score: number, sortedPages: PageResult[]): string[] {
   return tags.slice(0, 4);
 }
 
-function buildSummary(
+export function buildSummary(
   nameA: string,
   nameB: string,
   score: number,
@@ -193,4 +214,22 @@ function buildSummary(
     );
   }
   return parts.join(' ');
+}
+
+/**
+ * Vue invité du rapport : remplace l'identité réelle par le nom affiché
+ * choisi par l'admin pour la session (l'instantané stocké garde toujours
+ * les vraies données pour la vue admin). Le résumé est recalculé pour ne
+ * jamais laisser fuiter un prénom réel masqué par le réglage.
+ */
+export function applyIdentityDisplay(data: ReportData, mode: IdentityDisplayMode): ReportData {
+  const participants = data.participants.map((p) => ({
+    ...p,
+    firstName: computeDisplayName(mode, p.firstName, p.nickname, p.slot),
+    nickname: null,
+  }));
+  const [a, b] = participants;
+  const sortedPages = [...data.pages].sort((x, y) => y.score - x.score);
+  const summary = a && b ? buildSummary(a.firstName, b.firstName, data.score, data.counts, sortedPages) : data.summary;
+  return { ...data, participants, summary };
 }

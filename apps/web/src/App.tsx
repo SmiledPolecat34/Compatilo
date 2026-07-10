@@ -8,24 +8,35 @@ import Dashboard from './pages/admin/Dashboard';
 import SessionDetailPage from './pages/admin/SessionDetailPage';
 import QuestionnairesPage from './pages/admin/QuestionnairesPage';
 import QuestionnaireEditor from './pages/admin/QuestionnaireEditor';
+import SecurityPage from './pages/admin/SecurityPage';
+import MusicPage from './pages/admin/MusicPage';
+import StatsPage from './pages/admin/StatsPage';
+import { PlayerProvider } from './music/PlayerContext';
+import MiniPlayer from './music/MiniPlayer';
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/" element={<Home />} />
-      <Route path="/join/:pin" element={<Home />} />
-      <Route path="/session" element={<SessionFlow />} />
-      <Route path="/session/report" element={<ReportPage />} />
+    <PlayerProvider>
+      <MiniPlayer />
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/join/:pin" element={<Home />} />
+        <Route path="/session" element={<SessionFlow />} />
+        <Route path="/session/report" element={<ReportPage />} />
 
-      <Route path="/admin/login" element={<AdminLogin />} />
-      <Route path="/admin" element={<AdminLayout />}>
-        <Route index element={<Dashboard />} />
-        <Route path="sessions/:id" element={<SessionDetailPage />} />
-        <Route path="questionnaires" element={<QuestionnairesPage />} />
-        <Route path="questionnaires/versions/:versionId" element={<QuestionnaireEditor />} />
-      </Route>
+        <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<Dashboard />} />
+          <Route path="sessions/:id" element={<SessionDetailPage />} />
+          <Route path="questionnaires" element={<QuestionnairesPage />} />
+          <Route path="questionnaires/versions/:versionId" element={<QuestionnaireEditor />} />
+          <Route path="security" element={<SecurityPage />} />
+          <Route path="music" element={<MusicPage />} />
+          <Route path="stats" element={<StatsPage />} />
+        </Route>
 
-      <Route path="*" element={<Home />} />
-    </Routes>
+        <Route path="*" element={<Home />} />
+      </Routes>
+    </PlayerProvider>
   );
 }

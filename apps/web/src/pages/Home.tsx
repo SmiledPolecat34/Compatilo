@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import Logo from '../components/Logo';
 import PinModal from '../components/PinModal';
+import AdminLoginModal from '../components/AdminLoginModal';
 
 export default function Home() {
   const { pin: pinFromPath } = useParams();
   const [searchParams] = useSearchParams();
   const prefilledPin = pinFromPath ?? searchParams.get('pin') ?? '';
   const [modalOpen, setModalOpen] = useState(false);
+  const [adminModalOpen, setAdminModalOpen] = useState(false);
 
   // Un lien d'invitation ouvre automatiquement la popup, PIN pré-rempli
   useEffect(() => {
@@ -46,9 +48,18 @@ export default function Home() {
             </div>
           ))}
         </div>
+
+        <button
+          type="button"
+          className="btn-ghost mt-10 text-sm text-slate-400"
+          onClick={() => setAdminModalOpen(true)}
+        >
+          Administration
+        </button>
       </main>
 
       <PinModal open={modalOpen} initialPin={prefilledPin} onClose={() => setModalOpen(false)} />
+      <AdminLoginModal open={adminModalOpen} onClose={() => setAdminModalOpen(false)} />
     </div>
   );
 }

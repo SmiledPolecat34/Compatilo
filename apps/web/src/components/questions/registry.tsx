@@ -2,6 +2,7 @@ import type { ChangeEvent, ComponentType } from 'react';
 import { useMemo, useState } from 'react';
 import type { AnswerValue, QuestionDto, TrileanValue } from '../../types';
 import TrileanQuestion from './TrileanQuestion';
+import { useToast } from '../ToastProvider';
 
 export interface QuestionComponentProps {
   question: QuestionDto;
@@ -65,7 +66,7 @@ function YesNoQuestion({ question, value, onChange }: QuestionComponentProps) {
           aria-checked={value === opt.value}
           onClick={() => onChange(opt.value)}
           className={`rounded-lg border-2 px-3 py-3 font-semibold transition active:scale-[0.97] ${
-            value === opt.value ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-brand-100 bg-white text-slate-500 hover:border-brand-200'
+            value === opt.value ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-brand-100 bg-surface text-slate-500 hover:border-brand-200'
           }`}
         >
           {opt.label}
@@ -89,7 +90,7 @@ function ChoiceQuestion({ question, value, onChange }: QuestionComponentProps) {
           aria-checked={value === opt.value}
           onClick={() => onChange(opt.value)}
           className={`rounded-lg border-2 px-3 py-3 font-semibold transition active:scale-[0.97] ${
-            value === opt.value ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-brand-100 bg-white text-slate-500 hover:border-brand-200'
+            value === opt.value ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-brand-100 bg-surface text-slate-500 hover:border-brand-200'
           }`}
         >
           {opt.label}
@@ -100,6 +101,7 @@ function ChoiceQuestion({ question, value, onChange }: QuestionComponentProps) {
 }
 
 function CityQuestion({ value, onChange }: QuestionComponentProps) {
+  const toast = useToast();
   const current =
     value && typeof value === 'object' && 'city' in value
       ? (value as { city: string; latitude: number | null; longitude: number | null; locationConsent: boolean })
@@ -107,26 +109,45 @@ function CityQuestion({ value, onChange }: QuestionComponentProps) {
   const [coords, setCoords] = useState(
     current.latitude !== null && current.longitude !== null ? `${current.latitude}, ${current.longitude}` : '',
   );
+  const [locating, setLocating] = useState(false);
 
   function update(patch: Partial<typeof current>) {
     onChange({ ...current, ...patch });
   }
 
   async function useGeolocation() {
-    if (!('geolocation' in navigator)) return;
-    const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
-      navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 8000 }),
-    );
-    const latitude = pos.coords.latitude;
-    const longitude = pos.coords.longitude;
-    setCoords(`${latitude}, ${longitude}`);
+    if (!('geolocation' in navigator)) {
+      toast.error("Ton navigateur ne prend pas en charge la géolocalisation.");
+      return;
+    }
+    setLocating(true);
     try {
-      const geo = await fetch(
-        `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=fr`,
-      ).then((r) => r.json());
-      update({ city: geo.city || geo.locality || current.city, latitude, longitude, locationConsent: true });
-    } catch {
-      update({ latitude, longitude, locationConsent: true });
+      // Déclenche l'invite d'autorisation native du navigateur/appareil.
+      const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
+        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 8000 }),
+      );
+      const latitude = pos.coords.latitude;
+      const longitude = pos.coords.longitude;
+      setCoords(`${latitude}, ${longitude}`);
+      try {
+        const geo = await fetch(
+          `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=fr`,
+        ).then((r) => r.json());
+        update({ city: geo.city || geo.locality || current.city, latitude, longitude, locationConsent: true });
+      } catch {
+        update({ latitude, longitude, locationConsent: true });
+      }
+    } catch (err) {
+      const code = err instanceof GeolocationPositionError ? err.code : null;
+      if (code === 1) {
+        toast.error('Autorisation refusée — active la localisation pour ce site dans les réglages de ton navigateur.');
+      } else if (code === 3) {
+        toast.error('La localisation a mis trop de temps à répondre, réessaie.');
+      } else {
+        toast.error('Impossible de récupérer ta position.');
+      }
+    } finally {
+      setLocating(false);
     }
   }
 
@@ -142,8 +163,8 @@ function CityQuestion({ value, onChange }: QuestionComponentProps) {
     <div className="space-y-3">
       <input className="input" value={current.city} onChange={(e) => update({ city: e.target.value })} placeholder="Recherche ou saisis ta ville" />
       <div className="grid gap-2 sm:grid-cols-2">
-        <button type="button" className="btn-secondary" onClick={useGeolocation}>
-          Utiliser ma position
+        <button type="button" className="btn-secondary" onClick={useGeolocation} disabled={locating}>
+          {locating ? 'Localisation…' : 'Utiliser ma position'}
         </button>
         <a className="btn-secondary" href={`https://www.google.com/maps/search/${encodeURIComponent(current.city || 'ville')}`} target="_blank" rel="noreferrer">
           Ouvrir Google Maps
@@ -184,7 +205,7 @@ function OriginsQuestion({ value, onChange }: QuestionComponentProps) {
             className={`rounded-lg border px-3 py-2 text-left text-sm font-semibold ${
               current.selected.includes(origin.value)
                 ? 'border-brand-500 bg-brand-50 text-brand-700'
-                : 'border-brand-100 bg-white text-slate-600'
+                : 'border-brand-100 bg-surface text-slate-600'
             }`}
           >
             <span className="mr-2">{origin.flag}</span>

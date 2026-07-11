@@ -173,6 +173,7 @@ model Participant {
   sessionId       String
   session         Session     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   slot            Int // 1 ou 2
+  isAdmin         Boolean     @default(false) // l'admin répond lui-même, depuis le panel
   firstName       String
   nickname        String?
   snapchat        String?

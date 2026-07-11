@@ -21,7 +21,7 @@ export default function ThemeToggle() {
           title={opt.label}
           onClick={() => setTheme(opt.value)}
           className={`rounded-md px-2 py-1.5 text-sm transition ${
-            theme === opt.value ? 'bg-white shadow-sm' : 'opacity-60 hover:opacity-100'
+            theme === opt.value ? 'bg-surface shadow-sm' : 'opacity-60 hover:opacity-100'
           }`}
         >
           <span aria-hidden>{opt.icon}</span>

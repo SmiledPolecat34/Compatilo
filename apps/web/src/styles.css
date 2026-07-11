@@ -52,6 +52,7 @@
   --surface-2: #fdf6fb;
   --surface-3: #f6f4ff;
   --surface-card: rgb(255 255 255 / 85%);
+  --surface-solid: #ffffff;
   --surface-border: rgb(255 255 255 / 70%);
   --text-body: #241b35;
 }
@@ -61,8 +62,50 @@
   --surface-2: #1d1730;
   --surface-3: #15101f;
   --surface-card: rgb(38 30 58 / 85%);
-  --surface-border: rgb(255 255 255 / 8%);
+  --surface-solid: #241c39;
+  --surface-border: rgb(255 255 255 / 10%);
   --text-body: #ede9f8;
+
+  /* Repalette complète : chaque famille de couleur utilisée par l'app est
+     réécrite pour rester lisible sur fond sombre, sans toucher un seul
+     composant (Tailwind v4 expose chaque teinte en variable CSS). */
+  --color-slate-100: oklch(28% 0.02 257);
+  --color-slate-300: oklch(46% 0.025 257);
+  --color-slate-400: oklch(56% 0.03 257);
+  --color-slate-500: oklch(68% 0.03 257);
+  --color-slate-600: oklch(74% 0.025 257);
+  --color-slate-700: oklch(80% 0.02 257);
+  --color-slate-800: oklch(90% 0.015 257);
+
+  --color-brand-50: #241a3a;
+  --color-brand-100: #2f2150;
+  --color-brand-200: #3d2c63;
+  --color-brand-300: #6b4fa8;
+  --color-brand-400: #b499f5;
+  --color-brand-500: #a385f2;
+  --color-brand-600: #9868ea;
+  --color-brand-700: #cbb2fb;
+  --color-brand-800: #ddccff;
+  --color-brand-900: #f1e9ff;
+
+  --color-emerald-50: oklch(20% 0.05 160);
+  --color-emerald-100: oklch(28% 0.06 160);
+  --color-emerald-600: oklch(65% 0.15 160);
+  --color-emerald-700: oklch(78% 0.12 160);
+
+  --color-amber-50: oklch(22% 0.05 80);
+  --color-amber-100: oklch(30% 0.06 80);
+  --color-amber-300: oklch(65% 0.12 80);
+  --color-amber-400: oklch(75% 0.13 80);
+  --color-amber-700: oklch(80% 0.12 80);
+
+  --color-rose-50: oklch(22% 0.06 10);
+  --color-rose-100: oklch(30% 0.07 10);
+  --color-rose-200: oklch(38% 0.08 10);
+  --color-rose-400: oklch(65% 0.15 10);
+  --color-rose-500: oklch(68% 0.18 10);
+  --color-rose-600: oklch(72% 0.17 10);
+  --color-rose-700: oklch(80% 0.14 10);
 }
 
 /* Thème de démonstration — preuve que l'architecture accepte un troisième
@@ -72,6 +115,7 @@
   --surface-2: #ffede0;
   --surface-3: #fff3e6;
   --surface-card: rgb(255 255 255 / 88%);
+  --surface-solid: #ffffff;
   --surface-border: rgb(255 255 255 / 70%);
   --text-body: #3a1f0f;
 }
@@ -140,12 +184,19 @@ textarea {
   border-color: var(--surface-border);
 }
 
+/* Surface opaque (par opposition à .card, translucide) — options de
+   question, pastille de lecteur, zone de signature... S'adapte au thème. */
+.bg-surface {
+  background-color: var(--surface-solid);
+}
+
 .btn-primary {
   @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-brand-600 to-rose-accent px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-500/20 transition active:scale-[0.98] hover:opacity-95 disabled:opacity-40 disabled:pointer-events-none sm:px-5 sm:py-3 sm:text-base;
 }
 
 .btn-secondary {
-  @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-brand-200 bg-white px-4 py-2.5 text-sm font-semibold text-brand-700 transition hover:bg-brand-50 active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none sm:px-5 sm:py-3 sm:text-base;
+  @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-brand-200 px-4 py-2.5 text-sm font-semibold text-brand-700 transition hover:bg-brand-50 active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none sm:px-5 sm:py-3 sm:text-base;
+  background-color: var(--surface-solid);
 }
 
 .btn-ghost {
@@ -153,7 +204,9 @@ textarea {
 }
 
 .input {
-  @apply w-full rounded-lg border border-brand-200 bg-white px-4 py-3 outline-none transition focus:border-brand-400 focus:ring-4 focus:ring-brand-200/50 placeholder:text-slate-500;
+  @apply w-full rounded-lg border border-brand-200 px-4 py-3 outline-none transition focus:border-brand-400 focus:ring-4 focus:ring-brand-200/50 placeholder:text-slate-500;
+  background-color: var(--surface-solid);
+  color: var(--text-body);
 }
 
 .label {

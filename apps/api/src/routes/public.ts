@@ -1,4 +1,4 @@
-﻿import { Router } from 'express';
+import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
@@ -41,24 +41,24 @@ function validateAnswerValue(question: { type: string; prompt: string; config: u
   const maxLength = typeof config.maxLength === 'number' ? config.maxLength : 500;
 
   if (question.type === 'trilean') {
-    if (!isTrilean(value)) throw badRequest('Valeur de rÃ©ponse invalide.');
+    if (!isTrilean(value)) throw badRequest('Valeur de réponse invalide.');
     return value;
   }
   if (question.type === 'yesno') {
-    if (value !== 'YES' && value !== 'NO') throw badRequest('RÃ©ponse Oui / Non invalide.');
+    if (value !== 'YES' && value !== 'NO') throw badRequest('Réponse Oui / Non invalide.');
     return value;
   }
   if (question.type === 'text' || question.type === 'textarea') {
     if (isBlank(value)) throw badRequest(`${question.prompt} est requis.`);
     const text = String(value).trim();
-    if (text.length < minLength) throw badRequest(`${question.prompt} doit contenir au moins ${minLength} caractÃ¨res.`);
+    if (text.length < minLength) throw badRequest(`${question.prompt} doit contenir au moins ${minLength} caractères.`);
     if (text.length > maxLength) throw badRequest(`${question.prompt} est trop long.`);
     return text;
   }
   if (question.type === 'phone') {
-    if (isBlank(value)) throw badRequest('Le numÃ©ro de tÃ©lÃ©phone est requis.');
+    if (isBlank(value)) throw badRequest('Le numéro de téléphone est requis.');
     const phone = String(value).trim();
-    if (phone.length < 3 || !PHONE_RE.test(phone)) throw badRequest('NumÃ©ro de tÃ©lÃ©phone invalide.');
+    if (phone.length < 3 || !PHONE_RE.test(phone)) throw badRequest('Numéro de téléphone invalide.');
     return phone;
   }
   if (question.type === 'date') {
@@ -81,7 +81,7 @@ function validateAnswerValue(question: { type: string; prompt: string; config: u
     if (!value || typeof value !== 'object') throw badRequest('Ville invalide.');
     const city = value as { city?: unknown; latitude?: unknown; longitude?: unknown; locationConsent?: unknown };
     if (typeof city.city !== 'string' || city.city.trim().length < 3) {
-      throw badRequest('La ville doit contenir au moins 3 caractÃ¨res.');
+      throw badRequest('La ville doit contenir au moins 3 caractères.');
     }
     const locationConsent = Boolean(city.locationConsent);
     const latitude = typeof city.latitude === 'number' ? city.latitude : null;
@@ -97,11 +97,11 @@ function validateAnswerValue(question: { type: string; prompt: string; config: u
       ? raw.selected.filter((x): x is string => typeof x === 'string' && x.trim().length > 0).map((x) => x.trim())
       : [];
     const custom = typeof raw.custom === 'string' && raw.custom.trim().length > 0 ? raw.custom.trim() : null;
-    if (custom && custom.length < 3) throw badRequest("L'origine personnalisÃ©e doit contenir au moins 3 caractÃ¨res.");
-    if (selected.length === 0 && !custom) throw badRequest('SÃ©lectionne au moins une origine.');
+    if (custom && custom.length < 3) throw badRequest("L'origine personnalisée doit contenir au moins 3 caractères.");
+    if (selected.length === 0 && !custom) throw badRequest('Sélectionne au moins une origine.');
     return { selected: [...new Set(selected)], custom };
   }
-  throw badRequest(`Type de question non supportÃ© : ${question.type}`);
+  throw badRequest(`Type de question non supporté : ${question.type}`);
 }
 
 function isAnsweredForQuestion(question: { type: string; config: unknown }, value: unknown) {
@@ -126,19 +126,19 @@ const pinLimiter = rateLimit({
   limit: 30,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: 'Trop de tentatives, rÃ©essaie dans quelques minutes.' },
+  message: { error: 'Trop de tentatives, réessaie dans quelques minutes.' },
 });
 
-const pinSchema = z.object({ pin: z.string().regex(/^\d{6}$/, 'PIN Ã  6 chiffres attendu') });
+const pinSchema = z.object({ pin: z.string().regex(/^\d{6}$/, 'PIN à 6 chiffres attendu') });
 
-/** Bloque toute Ã©criture participant sur une session fermÃ©e par l'admin. */
+/** Bloque toute écriture participant sur une session fermée par l'admin. */
 async function assertSessionWritable(sessionId: string) {
   const session = await prisma.session.findUniqueOrThrow({
     where: { id: sessionId },
     select: { status: true },
   });
   if (session.status === 'CLOSED') {
-    throw forbidden('Cette session est fermÃ©e : aucune modification nâ€™est plus possible.');
+    throw forbidden('Cette session est fermée : aucune modification n�"est plus possible.');
   }
 }
 
@@ -149,14 +149,14 @@ async function findSessionByPin(pin: string) {
   });
   if (!session || session.status === 'ARCHIVED') throw notFound('Code PIN invalide.');
   if (session.lockedUntil && session.lockedUntil > new Date()) {
-    throw tooMany('Trop de tentatives. Cette session est temporairement verrouillÃ©e.');
+    throw tooMany('Trop de tentatives. Cette session est temporairement verrouillée.');
   }
   if (session.expiresAt && session.expiresAt < new Date()) {
-    throw forbidden('Cette session a expirÃ©.');
+    throw forbidden('Cette session a expiré.');
   }
   const ok = await verifyPin(pin, session.pinHash);
   if (!ok) {
-    // Collision HMAC improbable mais on applique quand mÃªme le compteur
+    // Collision HMAC improbable mais on applique quand même le compteur
     const attempts = session.failedAttempts + 1;
     await prisma.session.update({
       where: { id: session.id },
@@ -177,7 +177,7 @@ async function findSessionByPin(pin: string) {
   return session;
 }
 
-// â”€â”€ VÃ©rifier un PIN et dÃ©couvrir la session â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ���� Vérifier un PIN et découvrir la session ����������������������������������������������������
 publicRouter.post('/join/check', pinLimiter, validateBody(pinSchema), async (req, res, next) => {
   try {
     const session = await findSessionByPin(req.body.pin);
@@ -198,7 +198,7 @@ publicRouter.post('/join/check', pinLimiter, validateBody(pinSchema), async (req
   }
 });
 
-// â”€â”€ Rejoindre : nouveau participant ou reprise d'un existant â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ���� Rejoindre : nouveau participant ou reprise d'un existant ������������������
 const enterSchema = pinSchema.extend({
   slot: z.number().int().min(1).max(2).optional(),
   firstName: z.string().trim().min(3).max(60).optional(),
@@ -219,14 +219,14 @@ publicRouter.post('/join/enter', pinLimiter, validateBody(enterSchema), async (r
       // Reprise d'un participant existant
       participant = session.participants.find((p) => p.slot === slot);
       if (!participant) throw notFound('Participant introuvable.');
-      await logEvent(session.id, 'participant.resumed', `${participant.firstName} est revenuÂ·e`);
+      await logEvent(session.id, 'participant.resumed', `${participant.firstName} est revenu·e`);
     } else {
       if (session.status === 'CLOSED') {
-        throw forbidden('Cette session est fermÃ©e : elle nâ€™accepte plus de nouveaux participants.');
+        throw forbidden('Cette session est fermée : elle n�"accepte plus de nouveaux participants.');
       }
-      if (!firstName) throw badRequest('Le prÃ©nom est requis.');
+      if (!firstName) throw badRequest('Le prénom est requis.');
       if (session.participants.length >= 2) {
-        throw forbidden('Cette session est dÃ©jÃ  complÃ¨te (deux participants).');
+        throw forbidden('Cette session est déjà complète (deux participants).');
       }
       const nextSlot = session.participants.some((p) => p.slot === 1) ? 2 : 1;
       participant = await prisma.participant.create({
@@ -265,7 +265,7 @@ publicRouter.post('/join/enter', pinLimiter, validateBody(enterSchema), async (r
   }
 });
 
-// â”€â”€ Questionnaire + Ã©tat du participant â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ���� Questionnaire + état du participant ������������������������������������������������������������
 publicRouter.get('/me/questionnaire', requireParticipant, async (req, res, next) => {
   try {
     const { participantId, sessionId } = req.participant!;
@@ -298,7 +298,7 @@ publicRouter.get('/me/questionnaire', requireParticipant, async (req, res, next)
         where: { id: participantId },
         data: { startedAt: new Date() },
       });
-      await logEvent(sessionId, 'questionnaire.started', `${participant.firstName} a commencÃ© le questionnaire`);
+      await logEvent(sessionId, 'questionnaire.started', `${participant.firstName} a commencé le questionnaire`);
     }
 
     res.json({
@@ -334,7 +334,7 @@ publicRouter.get('/me/questionnaire', requireParticipant, async (req, res, next)
   }
 });
 
-// â”€â”€ Sauvegarde automatique d'une rÃ©ponse â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ���� Sauvegarde automatique d'une réponse ����������������������������������������������������������
 const answerSchema = z.object({ value: z.unknown() });
 
 publicRouter.put(
@@ -350,7 +350,7 @@ publicRouter.put(
       const participant = await prisma.participant.findUniqueOrThrow({
         where: { id: participantId },
       });
-      if (participant.completedAt) throw forbidden('Le questionnaire est dÃ©jÃ  terminÃ©.');
+      if (participant.completedAt) throw forbidden('Le questionnaire est déjà terminé.');
       await assertSessionWritable(sessionId);
 
       // La question doit appartenir au questionnaire de la session
@@ -409,7 +409,7 @@ publicRouter.put(
       } else if (profileField === 'phone' && typeof cleanValue === 'string') {
         await prisma.participant.update({ where: { id: participantId }, data: { phone: cleanValue } });
       }
-      await logEvent(sessionId, 'answer.saved', `${participant.firstName} a enregistrÃ© une rÃ©ponse`, {
+      await logEvent(sessionId, 'answer.saved', `${participant.firstName} a enregistré une réponse`, {
         questionId,
       });
       res.json({ ok: true });
@@ -419,7 +419,7 @@ publicRouter.put(
   },
 );
 
-// â”€â”€ Favoris (3 Ã  5) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ���� Favoris (3 à 5) ����������������������������������������������������������������������������������������������������
 const favoritesSchema = z.object({
   questionIds: z.array(z.string().min(1)).max(FAVORITES_MAX),
 });
@@ -459,7 +459,7 @@ publicRouter.put(
   },
 );
 
-// â”€â”€ Terminer le questionnaire â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ���� Terminer le questionnaire ��������������������������������������������������������������������������������
 publicRouter.post('/me/complete', requireParticipant, async (req, res, next) => {
   try {
     const { participantId, sessionId } = req.participant!;
@@ -491,11 +491,11 @@ publicRouter.post('/me/complete', requireParticipant, async (req, res, next) => 
       (q) => isDisplayed(q, answerByKey) && !isAnsweredForQuestion(q, answerById.get(q.id)),
     );
     if (missing.length > 0) {
-      throw badRequest(`Il reste ${missing.length} question(s) sans rÃ©ponse.`, 'INCOMPLETE');
+      throw badRequest(`Il reste ${missing.length} question(s) sans réponse.`, 'INCOMPLETE');
     }
     if (participant.favorites.length < FAVORITES_MIN) {
       throw badRequest(
-        `SÃ©lectionne au moins ${FAVORITES_MIN} favoris avant de terminer.`,
+        `Sélectionne au moins ${FAVORITES_MIN} favoris avant de terminer.`,
         'FAVORITES',
       );
     }
@@ -504,7 +504,7 @@ publicRouter.post('/me/complete', requireParticipant, async (req, res, next) => 
       where: { id: participantId },
       data: { completedAt: new Date() },
     });
-    await logEvent(sessionId, 'questionnaire.completed', `${participant.firstName} a terminÃ© le questionnaire`);
+    await logEvent(sessionId, 'questionnaire.completed', `${participant.firstName} a terminé le questionnaire`);
 
     const report = await generateReport(sessionId);
     res.json({ ok: true, reportReady: Boolean(report) });
@@ -513,7 +513,7 @@ publicRouter.post('/me/complete', requireParticipant, async (req, res, next) => 
   }
 });
 
-// â”€â”€ Rapport â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ���� Rapport ��������������������������������������������������������������������������������������������������������������������
 publicRouter.get('/me/report', requireParticipant, async (req, res, next) => {
   try {
     const { sessionId, participantId } = req.participant!;
@@ -535,7 +535,7 @@ publicRouter.get('/me/report', requireParticipant, async (req, res, next) => {
       return;
     }
     if (!session.reportAccessEnabled) {
-      throw forbidden("L'accÃ¨s au rapport a Ã©tÃ© dÃ©sactivÃ©.");
+      throw forbidden("L'accès au rapport a été désactivé.");
     }
     res.json({
       ready: true,
@@ -557,7 +557,7 @@ publicRouter.get('/me/report', requireParticipant, async (req, res, next) => {
   }
 });
 
-// â”€â”€ Signature â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ���� Signature ����������������������������������������������������������������������������������������������������������������
 const signatureSchema = z.object({
   image: z
     .string()
@@ -584,7 +584,7 @@ publicRouter.post(
         create: { reportId: report.id, participantId, image: req.body.image },
         update: { image: req.body.image, signedAt: new Date() },
       });
-      await logEvent(sessionId, 'signature.saved', `${participant.firstName} a signÃ© le rapport`);
+      await logEvent(sessionId, 'signature.saved', `${participant.firstName} a signé le rapport`);
       res.json({ ok: true });
     } catch (err) {
       next(err);

@@ -164,7 +164,7 @@ export default function MiniPlayer() {
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
-        className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-xl shadow-lg shadow-brand-500/20 ring-1 ring-brand-100 transition active:scale-95"
+        className="flex h-12 w-12 items-center justify-center rounded-full bg-surface text-xl shadow-lg shadow-brand-500/20 ring-1 ring-brand-100 transition active:scale-95"
         aria-label={expanded ? 'Masquer le lecteur' : 'Afficher le lecteur'}
       >
         {player.isPlaying ? '🎵' : '🎧'}

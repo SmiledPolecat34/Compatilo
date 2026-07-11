@@ -31,7 +31,6 @@ export default function PinModal({
   const [pin, setPin] = useState(initialPin);
   const [check, setCheck] = useState<CheckResult | null>(null);
   const [firstName, setFirstName] = useState('');
-  const [nickname, setNickname] = useState('');
   const [shareLocation, setShareLocation] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -75,10 +74,6 @@ export default function PinModal({
       setError('Le prénom doit contenir au moins 3 caractères.');
       return;
     }
-    if (!slot && nickname.trim().length > 0 && nickname.trim().length < 3) {
-      setError('Le surnom doit contenir au moins 3 caractères.');
-      return;
-    }
     setLoading(true);
     setError('');
     try {
@@ -109,7 +104,6 @@ export default function PinModal({
           : {
               pin,
               firstName: firstName.trim(),
-              nickname: nickname.trim() || undefined,
               locationConsent: shareLocation,
               latitude,
               longitude,
@@ -127,7 +121,7 @@ export default function PinModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-brand-900/40 backdrop-blur-sm sm:items-center animate-fade-in"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm sm:items-center animate-fade-in"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -222,18 +216,6 @@ export default function PinModal({
                 onChange={(e) => setFirstName(e.target.value)}
                 maxLength={60}
                 autoFocus
-              />
-            </div>
-            <div>
-              <label className="label" htmlFor="nickname">
-                Surnom (optionnel)
-              </label>
-              <input
-                id="nickname"
-                className="input"
-                value={nickname}
-                onChange={(e) => setNickname(e.target.value)}
-                maxLength={60}
               />
             </div>
             <label className="flex cursor-pointer items-start gap-3 rounded-lg bg-brand-50 p-4">

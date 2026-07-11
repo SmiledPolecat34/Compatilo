@@ -2,10 +2,11 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import { generatePin, hashPin, pinLookup, publicId } from '../lib/crypto.js';
-import { badRequest, notFound } from '../lib/errors.js';
+import { badRequest, conflict, forbidden, notFound } from '../lib/errors.js';
 import { requireAdmin } from '../middleware/auth.js';
 import { validateBody } from '../middleware/validate.js';
 import { logEvent } from '../services/timeline.js';
+import { signToken } from '../lib/jwt.js';
 import { env } from '../config/env.js';
 
 export const adminSessionsRouter = Router();
@@ -21,7 +22,7 @@ function sessionSummary(s: {
   closedAt: Date | null;
   expiresAt: Date | null;
   createdAt: Date;
-  participants: { slot: number; firstName: string; nickname: string | null; completedAt: Date | null }[];
+  participants: { slot: number; firstName: string; nickname: string | null; isAdmin: boolean; completedAt: Date | null }[];
   report: { code: string; score: number } | null;
   version: { version: number; questionnaire: { title: string } };
   playlist: { id: string; name: string } | null;
@@ -41,6 +42,7 @@ function sessionSummary(s: {
       slot: p.slot,
       firstName: p.firstName,
       nickname: p.nickname,
+      isAdmin: p.isAdmin,
       completed: Boolean(p.completedAt),
     })),
     report: s.report ? { code: s.report.code, score: s.report.score } : null,
@@ -145,6 +147,67 @@ adminSessionsRouter.post('/', validateBody(createSchema), async (req, res, next)
   }
 });
 
+// ── L'admin rejoint sa propre session comme second (ou premier)
+// participant, pour répondre en même temps que son invité·e ────────────
+const joinAsAdminSchema = z.object({
+  firstName: z.string().trim().min(3).max(60),
+  nickname: z.string().trim().min(3).max(60).optional(),
+});
+
+adminSessionsRouter.post('/:id/join', validateBody(joinAsAdminSchema), async (req, res, next) => {
+  try {
+    const session = await prisma.session.findUnique({
+      where: { id: req.params.id },
+      include: { participants: { orderBy: { slot: 'asc' } } },
+    });
+    if (!session) throw notFound();
+    if (session.status === 'CLOSED') {
+      throw forbidden('Cette session est fermée : aucune modification n’est plus possible.');
+    }
+
+    // Idempotent : si l'admin a déjà rejoint, on renvoie simplement un
+    // nouveau jeton pour reprendre là où il/elle en était.
+    let participant = session.participants.find((p) => p.isAdmin);
+    if (!participant) {
+      if (session.participants.length >= 2) {
+        throw conflict('Cette session est déjà complète (deux participants).');
+      }
+      const nextSlot = session.participants.some((p) => p.slot === 1) ? 2 : 1;
+      participant = await prisma.participant.create({
+        data: {
+          sessionId: session.id,
+          slot: nextSlot,
+          isAdmin: true,
+          firstName: req.body.firstName,
+          nickname: req.body.nickname || null,
+        },
+      });
+      await logEvent(
+        session.id,
+        'participant.joined',
+        `${req.body.firstName} (administrateur·rice) a rejoint la session`,
+        { slot: nextSlot },
+      );
+    }
+
+    const token = signToken(
+      { kind: 'participant', participantId: participant.id, sessionId: session.id },
+      '7d',
+    );
+    res.json({
+      token,
+      participant: {
+        id: participant.id,
+        slot: participant.slot,
+        firstName: participant.firstName,
+        completed: Boolean(participant.completedAt),
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // ── Détail complet (GPS inclus — réservé admin) ──────────────────────
 adminSessionsRouter.get('/:id', async (req, res, next) => {
   try {
@@ -190,6 +253,7 @@ adminSessionsRouter.get('/:id', async (req, res, next) => {
         slot: p.slot,
         firstName: p.firstName,
         nickname: p.nickname,
+        isAdmin: p.isAdmin,
         joinedAt: p.joinedAt,
         startedAt: p.startedAt,
         completedAt: p.completedAt,

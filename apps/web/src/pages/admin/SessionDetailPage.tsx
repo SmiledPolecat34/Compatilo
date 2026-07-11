@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { api } from '../../api/client';
+import { api, tokens } from '../../api/client';
 import type { IdentityDisplayMode, PlaylistSummary, SessionDetail, TimelineEvent } from '../../types';
 import ReportView from '../../components/report/ReportView';
 import SessionStatusBadge from '../../components/SessionStatusBadge';
 import { Skeleton } from '../../components/Skeleton';
 import { useToast } from '../../components/ToastProvider';
+import { Modal } from './Dashboard';
 
 const IDENTITY_LABELS: Record<IdentityDisplayMode, string> = {
   FIRST_NAME: 'Prénom',
@@ -41,6 +42,10 @@ export default function SessionDetailPage() {
   const [notes, setNotes] = useState('');
   const [notesSaved, setNotesSaved] = useState(true);
   const [showReport, setShowReport] = useState(false);
+  const [showJoinModal, setShowJoinModal] = useState(false);
+  const [joinName, setJoinName] = useState('');
+  const [joinNickname, setJoinNickname] = useState('');
+  const [joining, setJoining] = useState(false);
   const notesTimer = useRef<ReturnType<typeof setTimeout>>();
 
   const load = useCallback(() => {
@@ -157,6 +162,41 @@ export default function SessionDetailPage() {
     }
   }
 
+  const adminParticipant = session?.participants.find((p) => p.isAdmin) ?? null;
+
+  async function openQuestionnaireAsAdmin(firstName: string, nickname: string) {
+    setJoining(true);
+    try {
+      const result = await api<{ token: string; participant: { completed: boolean } }>(
+        `/api/admin/sessions/${id}/join`,
+        {
+          method: 'POST',
+          body: { firstName: firstName.trim(), nickname: nickname.trim() || undefined },
+          auth: 'admin',
+        },
+      );
+      tokens.set('participant', result.token);
+      // Nouvel onglet : le panel admin reste ouvert pendant que tu réponds.
+      window.open(result.participant.completed ? '/session/report' : '/session', '_blank');
+      setShowJoinModal(false);
+      load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur');
+    } finally {
+      setJoining(false);
+    }
+  }
+
+  function startAnswering() {
+    if (adminParticipant) {
+      openQuestionnaireAsAdmin(adminParticipant.firstName, '');
+    } else {
+      setJoinName('');
+      setJoinNickname('');
+      setShowJoinModal(true);
+    }
+  }
+
   if (!session) {
     return (
       <div className="animate-fade-up space-y-6">
@@ -199,6 +239,12 @@ export default function SessionDetailPage() {
           </p>
         </div>
         <div className="grid gap-2 sm:flex lg:justify-end">
+          {session.status !== 'CLOSED' &&
+            (!adminParticipant || !adminParticipant.completedAt) && (
+              <button type="button" className="btn-primary" onClick={startAnswering} disabled={joining}>
+                {adminParticipant ? 'Continuer à répondre' : 'Répondre au questionnaire'}
+              </button>
+            )}
           {session.status === 'CLOSED' ? (
             <button type="button" className="btn-secondary" onClick={reopenSession}>
               Rouvrir la session
@@ -237,6 +283,11 @@ export default function SessionDetailPage() {
                   <div key={p.id} className="rounded-lg border border-brand-100 p-4">
                     <div className="font-semibold text-brand-900">
                       {p.firstName} {p.nickname && <span className="text-slate-500">« {p.nickname} »</span>}
+                      {p.isAdmin && (
+                        <span className="ml-2 rounded-full bg-brand-100 px-2 py-0.5 text-xs font-semibold text-brand-700">
+                          Moi (admin)
+                        </span>
+                      )}
                     </div>
                     <div className="mt-2 space-y-1 text-sm text-slate-500">
                       <p>
@@ -382,6 +433,50 @@ export default function SessionDetailPage() {
           </section>
         </div>
       </div>
+
+      {showJoinModal && (
+        <Modal title="Répondre au questionnaire" onClose={() => setShowJoinModal(false)}>
+          <div className="space-y-4">
+            <p className="text-sm text-slate-500">
+              Réponds en tant que second participant, en parallèle de ton invité·e. Le
+              questionnaire s'ouvre dans un nouvel onglet.
+            </p>
+            <div>
+              <label className="label" htmlFor="joinName">
+                Ton prénom *
+              </label>
+              <input
+                id="joinName"
+                className="input"
+                value={joinName}
+                onChange={(e) => setJoinName(e.target.value)}
+                maxLength={60}
+                autoFocus
+              />
+            </div>
+            <div>
+              <label className="label" htmlFor="joinNickname">
+                Surnom (optionnel)
+              </label>
+              <input
+                id="joinNickname"
+                className="input"
+                value={joinNickname}
+                onChange={(e) => setJoinNickname(e.target.value)}
+                maxLength={60}
+              />
+            </div>
+            <button
+              type="button"
+              className="btn-primary w-full"
+              onClick={() => openQuestionnaireAsAdmin(joinName, joinNickname)}
+              disabled={joining || joinName.trim().length < 3}
+            >
+              {joining ? 'Ouverture…' : 'Commencer'}
+            </button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

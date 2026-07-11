@@ -97,7 +97,7 @@ export interface SessionSummary {
   expiresAt: string | null;
   createdAt: string;
   questionnaire: string;
-  participants: { slot: number; firstName: string; nickname: string | null; completed: boolean }[];
+  participants: { slot: number; firstName: string; nickname: string | null; isAdmin: boolean; completed: boolean }[];
   report: { code: string; score: number } | null;
   playlist: { id: string; name: string } | null;
 }
@@ -121,6 +121,7 @@ export interface SessionDetail {
     slot: number;
     firstName: string;
     nickname: string | null;
+    isAdmin: boolean;
     joinedAt: string;
     startedAt: string | null;
     completedAt: string | null;

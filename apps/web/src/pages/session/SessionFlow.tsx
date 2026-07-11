@@ -168,7 +168,7 @@ export default function SessionFlow() {
   return (
     <div className="mx-auto min-h-dvh w-full max-w-2xl px-3 pb-32 pt-4 sm:px-4 sm:pt-6">
       {/* Barre de progression */}
-      <header className="sticky top-0 z-10 -mx-3 bg-gradient-to-b from-[#faf8ff] via-[#faf8ff] to-transparent px-3 pb-4 pt-2 sm:-mx-4 sm:px-4">
+      <header className="sticky top-0 z-10 -mx-3 bg-gradient-to-b from-[var(--surface-1)] via-[var(--surface-1)] to-transparent px-3 pb-4 pt-2 sm:-mx-4 sm:px-4">
         <div className="flex items-center justify-between">
           <Logo size={30} />
           <div className="flex items-center gap-3 text-sm text-slate-500">
@@ -218,6 +218,12 @@ export default function SessionFlow() {
                   <p className="font-semibold text-slate-800">
                     <span className="mr-2 text-sm font-bold text-brand-400">{i + 1}</span>
                     {q.prompt}
+                    {q.required && (
+                      <span className="ml-0.5 text-rose-500" aria-hidden>
+                        *
+                      </span>
+                    )}
+                    {q.required && <span className="sr-only"> (obligatoire)</span>}
                   </p>
                   <button
                     type="button"
@@ -250,7 +256,7 @@ export default function SessionFlow() {
 
       {/* Navigation */}
       <footer
-        className="fixed inset-x-0 bottom-0 border-t border-brand-100 bg-white/90 p-3 backdrop-blur sm:p-4"
+        className="fixed inset-x-0 bottom-0 border-t border-brand-100 bg-[color-mix(in_oklab,var(--surface-solid)_90%,transparent)] p-3 backdrop-blur sm:p-4"
         style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
       >
         <div className="mx-auto grid max-w-2xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 sm:gap-3">

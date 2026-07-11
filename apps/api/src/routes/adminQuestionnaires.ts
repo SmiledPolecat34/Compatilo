@@ -50,6 +50,27 @@ adminQuestionnairesRouter.post('/', validateBody(createSchema), async (req, res,
   }
 });
 
+// ── Renommage du questionnaire ────────────────────────────────────────
+const renameSchema = z.object({
+  title: z.string().trim().min(1).max(120),
+  description: z.string().trim().max(500).nullable().optional(),
+});
+
+adminQuestionnairesRouter.patch('/:id', validateBody(renameSchema), async (req, res, next) => {
+  try {
+    const questionnaire = await prisma.questionnaire.update({
+      where: { id: req.params.id },
+      data: {
+        title: req.body.title,
+        ...(req.body.description !== undefined ? { description: req.body.description } : {}),
+      },
+    });
+    res.json(questionnaire);
+  } catch (err) {
+    next(err);
+  }
+});
+
 // ── Détail d'une version (structure complète) ────────────────────────
 adminQuestionnairesRouter.get('/versions/:versionId', async (req, res, next) => {
   try {

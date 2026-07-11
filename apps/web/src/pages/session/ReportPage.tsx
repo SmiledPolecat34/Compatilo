@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, ApiError, tokens } from '../../api/client';
-import type { ReportPayload } from '../../types';
+import type { ReportPayload, TrileanValue } from '../../types';
 import ReportView from '../../components/report/ReportView';
 import SignaturePad from '../../components/report/SignaturePad';
 import ContractModal from '../../components/report/ContractModal';
@@ -98,19 +98,37 @@ export default function ReportPage() {
     load();
   }
 
+  async function reconcile(questionId: string, value: TrileanValue) {
+    await api('/api/public/me/report/reconcile', {
+      method: 'POST',
+      body: { questionId, value },
+      auth: 'participant',
+    });
+    load();
+  }
+
+  const reconcilableDifferences = report.data.pages
+    .flatMap((p) => p.results)
+    .filter((r) => r.questionType === 'trilean' && r.kind === 'DIFFERENCE');
+
   return (
     <div className="mx-auto min-h-dvh w-full max-w-4xl px-4 py-8">
-      <div className="no-print mb-6 flex flex-wrap items-center justify-between gap-3">
+      <div className="no-print mb-6">
         <Logo size={34} />
-        <div className="flex gap-2">
-          <button type="button" className="btn-primary" onClick={() => setShowContract(true)}>
-            Voir le contrat 📜
-          </button>
-          <button type="button" className="btn-secondary" onClick={() => window.print()}>
-            Exporter en PDF
-          </button>
-        </div>
       </div>
+      <button
+        type="button"
+        onClick={() => reconcilableDifferences.length === 0 && setShowContract(true)}
+        disabled={reconcilableDifferences.length > 0}
+        title={
+          reconcilableDifferences.length > 0
+            ? 'Réglez vos différences avant de voir le contrat.'
+            : undefined
+        }
+        className="no-print fixed right-16 top-3 z-40 flex h-11 items-center gap-2 rounded-full border border-brand-100 bg-surface px-4 text-sm font-semibold text-brand-700 shadow-lg transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <span aria-hidden>📜</span> Voir le contrat
+      </button>
       <ReportView
         code={report.code}
         score={report.score}
@@ -119,6 +137,7 @@ export default function ReportPage() {
         signatures={report.signatures}
         myParticipantId={report.myParticipantId}
         signatureSlot={<SignaturePad onSave={saveSignature} />}
+        onReconcile={reconcile}
       />
       {showContract && (
         <ContractModal

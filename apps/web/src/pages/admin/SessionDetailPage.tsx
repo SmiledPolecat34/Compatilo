@@ -10,6 +10,7 @@ import type {
   TimelineEvent,
 } from '../../types';
 import ReportView from '../../components/report/ReportView';
+import ContractModal from '../../components/report/ContractModal';
 import SessionStatusBadge from '../../components/SessionStatusBadge';
 import { Skeleton } from '../../components/Skeleton';
 import { useToast } from '../../components/ToastProvider';
@@ -85,6 +86,7 @@ export default function SessionDetailPage() {
   const [notes, setNotes] = useState('');
   const [notesSaved, setNotesSaved] = useState(true);
   const [showReport, setShowReport] = useState(false);
+  const [showContract, setShowContract] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [joinName, setJoinName] = useState('');
   const [joinNickname, setJoinNickname] = useState('');
@@ -456,13 +458,18 @@ export default function SessionDetailPage() {
                   {session.report.code} — score {session.report.score}% — généré le{' '}
                   {new Date(session.report.generatedAt).toLocaleString('fr-FR')}
                 </p>
-                <button
-                  type="button"
-                  className="btn-secondary mt-3"
-                  onClick={() => setShowReport((v) => !v)}
-                >
-                  {showReport ? 'Masquer le rapport' : 'Afficher le rapport'}
-                </button>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => setShowReport((v) => !v)}
+                  >
+                    {showReport ? 'Masquer le rapport' : 'Afficher le rapport'}
+                  </button>
+                  <button type="button" className="btn-primary" onClick={() => setShowContract(true)}>
+                    Voir le contrat 📜
+                  </button>
+                </div>
               </div>
             ) : (
               <p className="mt-4 text-slate-500">
@@ -478,6 +485,16 @@ export default function SessionDetailPage() {
               generatedAt={session.report.generatedAt}
               data={session.report.data}
               signatures={session.report.signatures}
+            />
+          )}
+          {showContract && session.report && (
+            <ContractModal
+              code={session.report.code}
+              score={session.report.score}
+              generatedAt={session.report.generatedAt}
+              data={session.report.data}
+              signatures={session.report.signatures}
+              onClose={() => setShowContract(false)}
             />
           )}
         </div>

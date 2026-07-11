@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import type { MatchKind, ReportData, TrileanValue } from '../../types';
 import ScoreDonut from './ScoreDonut';
 
@@ -22,6 +22,8 @@ export interface ReportViewProps {
   signatures: { participantId: string; image: string; signedAt: string }[];
   signatureSlot?: ReactNode; // zone de signature pour le participant courant
   myParticipantId?: string;
+  /** Fourni côté participant : permet de se mettre d'accord sur une différence trilean. */
+  onReconcile?: (questionId: string, value: TrileanValue) => Promise<void>;
 }
 
 export default function ReportView({
@@ -32,6 +34,7 @@ export default function ReportView({
   signatures,
   signatureSlot,
   myParticipantId,
+  onReconcile,
 }: ReportViewProps) {
   const date = new Date(generatedAt);
   const [a, b] = data.participants;
@@ -42,6 +45,7 @@ export default function ReportView({
   const differences = data.pages.flatMap((p) =>
     p.results.filter((r) => r.kind === 'DIFFERENCE').map((r) => ({ ...r, pageTitle: p.title })),
   );
+  const reconcilableDifferences = differences.filter((r) => r.questionType === 'trilean');
   const commons = data.pages.flatMap((p) =>
     p.results.filter((r) => r.kind === 'MATCH').map((r) => ({ ...r, pageTitle: p.title })),
   );
@@ -86,6 +90,35 @@ export default function ReportView({
           </div>
         </section>
 
+        {/* Sommaire */}
+        <nav aria-label="Sommaire du rapport" className="rounded-2xl border border-brand-100 bg-surface p-4">
+          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-brand-400">Sommaire</p>
+          <ul className="grid gap-1 text-sm sm:grid-cols-2">
+            {[
+              { href: '#theme', label: 'Compatibilité par thème' },
+              { href: '#profils', label: 'Cartes de profil' },
+              { href: '#communs', label: 'Vos points communs', count: commons.length },
+              { href: '#differences', label: 'Vos différences', count: differences.length },
+              { href: '#toutes-reponses', label: 'Toutes les réponses' },
+              { href: '#signatures', label: 'Signatures' },
+            ].map((item) => (
+              <li key={item.href}>
+                <a
+                  href={item.href}
+                  className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-brand-700 transition hover:bg-brand-50"
+                >
+                  <span>{item.label}</span>
+                  {item.count !== undefined && (
+                    <span className="rounded-full bg-brand-100 px-2 py-0.5 text-xs font-semibold text-brand-700">
+                      {item.count}
+                    </span>
+                  )}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
         {/* Résumé intelligent */}
         <section>
           <SectionTitle>En résumé</SectionTitle>
@@ -93,7 +126,7 @@ export default function ReportView({
         </section>
 
         {/* Graphique par thème */}
-        <section>
+        <section id="theme" className="scroll-mt-20">
           <SectionTitle>Compatibilité par thème</SectionTitle>
           <div className="space-y-3">
             {themedPages.map((p) => (
@@ -114,7 +147,7 @@ export default function ReportView({
         </section>
 
         {/* Cartes profils + favoris */}
-        <section>
+        <section id="profils" className="scroll-mt-20">
           <SectionTitle>Cartes de profil</SectionTitle>
           <div className="grid gap-4 sm:grid-cols-2">
             {data.participants.map((p) => (
@@ -166,7 +199,7 @@ export default function ReportView({
         </section>
 
         {/* Réponses communes */}
-        <section>
+        <section id="communs" className="scroll-mt-20">
           <SectionTitle>
             Vos points communs <span className="text-slate-500">({commons.length})</span>
           </SectionTitle>
@@ -174,19 +207,41 @@ export default function ReportView({
         </section>
 
         {/* Différences */}
-        <section>
+        <section id="differences" className="scroll-mt-20">
           <SectionTitle>
             Vos différences <span className="text-slate-500">({differences.length})</span>
           </SectionTitle>
           {differences.length === 0 ? (
             <p className="text-slate-500">Aucune vraie différence — impressionnant ! 🎉</p>
           ) : (
-            <AnswerList items={differences} a={a.firstName} b={b.firstName} />
+            <>
+              {onReconcile && reconcilableDifferences.length > 0 && (
+                <p className="mb-3 text-sm text-slate-500">
+                  Mettez-vous d'accord sur une réponse commune pour pouvoir signer et télécharger
+                  le contrat.
+                </p>
+              )}
+              <div className="space-y-2">
+                {differences.map((r) => (
+                  <div key={r.questionId} className="rounded-2xl border border-brand-100 bg-surface px-4 py-3">
+                    <p className="text-sm font-medium text-slate-700">{r.prompt}</p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {r.pageTitle} — {a.firstName} :{' '}
+                      <strong>{r.valueA ? VALUE_LABEL[r.valueA] : '—'}</strong> · {b.firstName} :{' '}
+                      <strong>{r.valueB ? VALUE_LABEL[r.valueB] : '—'}</strong>
+                    </p>
+                    {onReconcile && r.questionType === 'trilean' && (
+                      <ReconcileControls questionId={r.questionId} onReconcile={onReconcile} />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </section>
 
         {/* Détail complet */}
-        <section>
+        <section id="toutes-reponses" className="scroll-mt-20">
           <SectionTitle>Toutes les réponses</SectionTitle>
           <div className="space-y-6">
             {data.pages.map((p) => (
@@ -231,7 +286,7 @@ export default function ReportView({
         </section>
 
         {/* Signatures */}
-        <section>
+        <section id="signatures" className="scroll-mt-20">
           <SectionTitle>Signatures</SectionTitle>
           <div className="grid gap-4 sm:grid-cols-2">
             {data.participants.map((p) => {
@@ -247,7 +302,13 @@ export default function ReportView({
                       className="h-24 object-contain"
                     />
                   ) : isMe && signatureSlot ? (
-                    signatureSlot
+                    reconcilableDifferences.length > 0 ? (
+                      <p className="flex h-24 items-center justify-center px-2 text-center text-sm text-rose-600">
+                        Réglez vos {reconcilableDifferences.length} différence(s) avant de signer.
+                      </p>
+                    ) : (
+                      signatureSlot
+                    )
                   ) : (
                     <p className="flex h-24 items-center justify-center text-sm text-slate-500">
                       En attente de signature…
@@ -269,6 +330,48 @@ export default function ReportView({
         </footer>
       </div>
     </article>
+  );
+}
+
+const RECONCILE_OPTIONS: { value: TrileanValue; label: string }[] = [
+  { value: 'YES', label: 'Oui' },
+  { value: 'POSSIBLE', label: 'Possible' },
+  { value: 'NO', label: 'Non' },
+];
+
+function ReconcileControls({
+  questionId,
+  onReconcile,
+}: {
+  questionId: string;
+  onReconcile: (questionId: string, value: TrileanValue) => Promise<void>;
+}) {
+  const [loading, setLoading] = useState<TrileanValue | null>(null);
+
+  async function pick(value: TrileanValue) {
+    setLoading(value);
+    try {
+      await onReconcile(questionId, value);
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-brand-100 pt-3">
+      <span className="text-xs font-semibold text-slate-500">On tombe d'accord sur :</span>
+      {RECONCILE_OPTIONS.map((opt) => (
+        <button
+          key={opt.value}
+          type="button"
+          onClick={() => pick(opt.value)}
+          disabled={loading !== null}
+          className="rounded-full border border-brand-200 px-3 py-1 text-xs font-semibold text-brand-700 transition hover:bg-brand-50 disabled:opacity-50"
+        >
+          {loading === opt.value ? '…' : opt.label}
+        </button>
+      ))}
+    </div>
   );
 }
 

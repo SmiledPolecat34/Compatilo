@@ -145,7 +145,7 @@ export default function PinModal({
     >
       <div
         ref={dialogRef}
-        className="card max-h-[85dvh] w-full max-w-md overflow-y-auto rounded-lg p-4 sm:p-8 animate-fade-up"
+        className="card max-h-[85svh] w-full max-w-md overflow-y-auto rounded-lg p-4 sm:p-8 animate-fade-up"
       >
         <div className="flex items-start justify-between">
           <h2 className="font-display text-2xl font-bold text-brand-900">

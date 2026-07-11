@@ -87,7 +87,7 @@ export default function MiniPlayer() {
                   onClick={player.toggleShuffle}
                   aria-pressed={player.shuffle}
                   aria-label="Lecture aléatoire"
-                  className={`btn-ghost ${player.shuffle ? 'text-brand-700' : 'text-slate-500'}`}
+                  className={`btn-ghost rounded-full ${player.shuffle ? 'bg-brand-100 text-brand-700' : 'text-slate-500'}`}
                 >
                   🔀
                 </button>
@@ -109,7 +109,7 @@ export default function MiniPlayer() {
                   type="button"
                   onClick={player.cycleRepeat}
                   aria-label="Répétition"
-                  className={`btn-ghost ${player.repeatMode !== 'off' ? 'text-brand-700' : 'text-slate-500'}`}
+                  className={`btn-ghost rounded-full ${player.repeatMode !== 'off' ? 'bg-brand-100 text-brand-700' : 'text-slate-500'}`}
                 >
                   {player.repeatMode === 'one' ? '🔂' : '🔁'}
                 </button>
@@ -131,7 +131,7 @@ export default function MiniPlayer() {
                   step={0.01}
                   value={player.muted ? 0 : player.volume}
                   onChange={(e) => player.setVolume(Number(e.target.value))}
-                  className="w-full accent-brand-600"
+                  className="hidden w-full accent-brand-600 sm:block"
                   aria-label="Volume"
                 />
               </div>

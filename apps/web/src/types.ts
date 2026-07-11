@@ -35,6 +35,7 @@ export interface QuestionnairePayload {
 
 export interface QuestionResult {
   questionId: string;
+  questionType: string;
   prompt: string;
   valueA: TrileanValue | null;
   valueB: TrileanValue | null;

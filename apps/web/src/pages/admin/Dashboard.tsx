@@ -332,7 +332,7 @@ export function Modal({
       aria-label={title}
     >
       <div
-        className="card max-h-[85dvh] w-full max-w-md overflow-y-auto rounded-lg p-4 sm:p-6 animate-fade-up"
+        className="card max-h-[85svh] w-full max-w-md overflow-y-auto rounded-lg p-4 sm:p-6 animate-fade-up"
       >
         <div className="mb-4 flex items-start justify-between">
           <h2 className="font-display text-xl font-bold text-brand-900">{title}</h2>

@@ -8,7 +8,7 @@ import { badRequest, forbidden, notFound, tooMany } from '../lib/errors.js';
 import { requireParticipant } from '../middleware/auth.js';
 import { validateBody } from '../middleware/validate.js';
 import { logEvent } from '../services/timeline.js';
-import { applyIdentityDisplay, generateReport, type ReportData } from '../services/report.js';
+import { applyIdentityDisplay, generateReport, regenerateReport, type ReportData } from '../services/report.js';
 import { applyDefaultAnswers } from '../services/defaultAnswers.js';
 import { isTrilean } from '../domain/compatibility.js';
 import { computeDisplayName, type IdentityDisplayMode } from '../domain/identity.js';
@@ -564,6 +564,58 @@ publicRouter.get('/me/report', requireParticipant, async (req, res, next) => {
 });
 
 // ���� Signature ����������������������������������������������������������������������������������������������������������������
+// ── Réconciliation des différences ────────────────────────────────────
+// Avant de signer/télécharger le contrat, les deux participants doivent
+// tomber d'accord sur les questions "trilean" où leurs réponses diffèrent :
+// on fige la même valeur des deux côtés, ce qui transforme la différence
+// en point commun, puis on recalcule le rapport.
+const reconcileSchema = z.object({
+  questionId: z.string().min(1),
+  value: z.enum(['YES', 'POSSIBLE', 'NO']),
+});
+
+publicRouter.post(
+  '/me/report/reconcile',
+  requireParticipant,
+  validateBody(reconcileSchema),
+  async (req, res, next) => {
+    try {
+      const { sessionId } = req.participant!;
+      await assertSessionWritable(sessionId);
+      const { questionId, value } = req.body as z.infer<typeof reconcileSchema>;
+
+      const report = await prisma.report.findUnique({ where: { sessionId } });
+      if (!report) throw notFound("Le rapport n'est pas encore disponible.");
+
+      const question = await prisma.question.findFirst({
+        where: {
+          id: questionId,
+          type: 'trilean',
+          page: { version: { sessions: { some: { id: sessionId } } } },
+        },
+      });
+      if (!question) throw notFound('Question introuvable.');
+
+      const participants = await prisma.participant.findMany({ where: { sessionId } });
+      await prisma.$transaction(
+        participants.map((p) =>
+          prisma.answer.upsert({
+            where: { participantId_questionId: { participantId: p.id, questionId } },
+            create: { participantId: p.id, questionId, value },
+            update: { value },
+          }),
+        ),
+      );
+
+      await regenerateReport(sessionId);
+      await logEvent(sessionId, 'answer.saved', 'Réponse ajustée d’un commun accord', { questionId });
+      res.json({ ok: true });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
 const signatureSchema = z.object({
   image: z
     .string()
@@ -581,6 +633,16 @@ publicRouter.post(
       await assertSessionWritable(sessionId);
       const report = await prisma.report.findUnique({ where: { sessionId } });
       if (!report) throw notFound("Le rapport n'est pas encore disponible.");
+
+      const reportData = report.data as unknown as ReportData;
+      const hasUnresolvedDifferences = reportData.pages.some((p) =>
+        p.results.some((r) => r.questionType === 'trilean' && r.kind === 'DIFFERENCE'),
+      );
+      if (hasUnresolvedDifferences) {
+        throw forbidden(
+          'Mettez-vous d’accord sur vos différences avant de signer le contrat.',
+        );
+      }
 
       const participant = await prisma.participant.findUniqueOrThrow({
         where: { id: participantId },

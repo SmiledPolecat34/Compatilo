@@ -237,7 +237,9 @@ export default function SessionFlow() {
                       isFav ? 'text-amber-400' : 'text-slate-300 hover:text-amber-300'
                     }`}
                   >
-                    {isFav ? '★' : '☆'}
+                    <span key={isFav ? 'on' : 'off'} className="inline-block animate-pop">
+                      {isFav ? '★' : '☆'}
+                    </span>
                   </button>
                 </div>
                 {q.helpText && <p className="mt-1 text-sm text-slate-500">{q.helpText}</p>}
@@ -288,7 +290,9 @@ export default function SessionFlow() {
           ) : isLastPage ? (
             <button
               type="button"
-              className="btn-primary px-3 sm:px-5"
+              className={`btn-primary rounded-full px-3 sm:px-5 ${
+                allAnswered && favoritesOk && !completing ? 'animate-glow' : ''
+              }`}
               onClick={complete}
               disabled={!allAnswered || !favoritesOk || completing}
             >

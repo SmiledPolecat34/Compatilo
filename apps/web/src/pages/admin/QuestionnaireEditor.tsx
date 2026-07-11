@@ -25,7 +25,7 @@ interface VersionPayload {
   id: string;
   version: number;
   status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
-  questionnaire: { id: string; title: string };
+  questionnaire: { id: string; title: string; description: string | null };
   pages: {
     id: string;
     title: string;
@@ -51,7 +51,11 @@ export default function QuestionnaireEditor() {
   const { versionId } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
-  const [meta, setMeta] = useState<{ title: string; version: number; status: string } | null>(null);
+  const [meta, setMeta] = useState<{ id: string; title: string; version: number; status: string } | null>(
+    null,
+  );
+  const [titleDraft, setTitleDraft] = useState('');
+  const [savingTitle, setSavingTitle] = useState(false);
   const [pages, setPages] = useState<EditorPage[]>([]);
   const [selectedPage, setSelectedPage] = useState(0);
   const [saveState, setSaveState] = useState<'saved' | 'saving' | 'dirty' | 'error'>('saved');
@@ -66,7 +70,8 @@ export default function QuestionnaireEditor() {
   useEffect(() => {
     api<VersionPayload>(`/api/admin/questionnaires/versions/${versionId}`, { auth: 'admin' })
       .then((v) => {
-        setMeta({ title: v.questionnaire.title, version: v.version, status: v.status });
+        setMeta({ id: v.questionnaire.id, title: v.questionnaire.title, version: v.version, status: v.status });
+        setTitleDraft(v.questionnaire.title);
         setPages(
           v.pages.map((p) => ({
             id: p.id,
@@ -98,6 +103,26 @@ export default function QuestionnaireEditor() {
       })
       .catch((err) => toast.error(err instanceof Error ? err.message : 'Chargement impossible.'));
   }, [versionId, toast]);
+
+  async function saveTitle() {
+    const title = titleDraft.trim();
+    if (!title || !meta || title === meta.title) return;
+    setSavingTitle(true);
+    try {
+      await api(`/api/admin/questionnaires/${meta.id}`, {
+        method: 'PATCH',
+        auth: 'admin',
+        body: { title },
+      });
+      setMeta((m) => (m ? { ...m, title } : m));
+      toast.success('Titre mis à jour.');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur');
+      setTitleDraft(meta.title);
+    } finally {
+      setSavingTitle(false);
+    }
+  }
 
   async function saveDefaultAnswers() {
     setSavingDefaults(true);
@@ -267,11 +292,20 @@ export default function QuestionnaireEditor() {
         ← Questionnaires
       </Link>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="font-display text-2xl font-bold text-brand-900">
-            {meta.title} — v{meta.version}
-          </h1>
-          <p className="text-sm text-slate-500" aria-live="polite">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <input
+              className="input min-w-0 max-w-sm font-display text-xl font-bold text-brand-900"
+              value={titleDraft}
+              onChange={(e) => setTitleDraft(e.target.value)}
+              onBlur={saveTitle}
+              onKeyDown={(e) => e.key === 'Enter' && (e.currentTarget as HTMLInputElement).blur()}
+              aria-label="Titre du questionnaire"
+              disabled={savingTitle}
+            />
+            <span className="shrink-0 text-sm text-slate-500">v{meta.version}</span>
+          </div>
+          <p className="mt-1 text-sm text-slate-500" aria-live="polite">
             {saveState === 'saved' && 'Brouillon enregistré ✓'}
             {saveState === 'dirty' && 'Modifications en attente…'}
             {saveState === 'saving' && 'Enregistrement…'}

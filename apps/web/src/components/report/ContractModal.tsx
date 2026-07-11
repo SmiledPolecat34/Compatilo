@@ -42,10 +42,27 @@ export default function ContractModal({
     try {
       const canvas = await capture();
       if (!canvas) return;
+      const blob: Blob | null = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+      if (!blob) return;
+      const fileName = `contrat-compatilo-${code}.png`;
+      const file = new File([blob], fileName, { type: 'image/png' });
+
+      // Sur mobile, le partage natif propose "Enregistrer l'image" qui va
+      // directement dans la pellicule (Photos) plutôt que dans Fichiers.
+      if (navigator.canShare?.({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file] });
+          return;
+        } catch {
+          // Partage annulé ou indisponible : on retombe sur le téléchargement classique.
+        }
+      }
+
       const link = document.createElement('a');
-      link.download = `contrat-compatilo-${code}.png`;
-      link.href = canvas.toDataURL('image/png');
+      link.download = fileName;
+      link.href = URL.createObjectURL(blob);
       link.click();
+      URL.revokeObjectURL(link.href);
     } finally {
       setExporting(false);
     }

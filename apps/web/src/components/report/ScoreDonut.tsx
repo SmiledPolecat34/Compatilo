@@ -1,8 +1,27 @@
+import { useEffect, useState } from 'react';
+
 export default function ScoreDonut({ score, size = 160 }: { score: number; size?: number }) {
   const stroke = 14;
   const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
-  const offset = circumference * (1 - score / 100);
+  const [display, setDisplay] = useState(0);
+  const offset = circumference * (1 - display / 100);
+
+  // Petit compteur qui monte jusqu'au score : rend le résultat plus vivant.
+  useEffect(() => {
+    setDisplay(0);
+    const duration = 900;
+    const start = performance.now();
+    let frame: number;
+    function tick(now: number) {
+      const progress = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setDisplay(Math.round(eased * score));
+      if (progress < 1) frame = requestAnimationFrame(tick);
+    }
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [score]);
 
   return (
     <svg
@@ -37,7 +56,7 @@ export default function ScoreDonut({ score, size = 160 }: { score: number; size?
         strokeDasharray={circumference}
         strokeDashoffset={offset}
         transform={`rotate(-90 ${size / 2} ${size / 2})`}
-        style={{ transition: 'stroke-dashoffset 1s ease' }}
+        style={{ transition: 'stroke-dashoffset 0.2s ease' }}
       />
       <text
         x="50%"
@@ -47,7 +66,7 @@ export default function ScoreDonut({ score, size = 160 }: { score: number; size?
         className="fill-brand-900"
         style={{ fontSize: size * 0.24, fontWeight: 800, fontFamily: 'Fraunces, serif' }}
       >
-        {score}%
+        {display}%
       </text>
       <text
         x="50%"

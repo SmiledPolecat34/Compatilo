@@ -13,6 +13,7 @@ import {
 
 export interface QuestionResult {
   questionId: string;
+  questionType: string;
   prompt: string;
   valueA: TrileanValue | null;
   valueB: TrileanValue | null;
@@ -48,11 +49,7 @@ export interface ReportData {
   summary: string;
 }
 
-/** Génère le rapport quand les deux participants ont terminé. Idempotent. */
-export async function generateReport(sessionId: string) {
-  const existing = await prisma.report.findUnique({ where: { sessionId } });
-  if (existing) return existing;
-
+async function computeReportData(sessionId: string) {
   const session = await prisma.session.findUniqueOrThrow({
     where: { id: sessionId },
     include: {
@@ -98,6 +95,7 @@ export async function generateReport(sessionId: string) {
       }
       results.push({
         questionId: q.id,
+        questionType: q.type,
         prompt: q.prompt,
         valueA: vA,
         valueB: vB,
@@ -141,20 +139,49 @@ export async function generateReport(sessionId: string) {
     summary,
   };
 
+  return data;
+}
+
+/** Génère le rapport quand les deux participants ont terminé. Idempotent. */
+export async function generateReport(sessionId: string) {
+  const existing = await prisma.report.findUnique({ where: { sessionId } });
+  if (existing) return existing;
+
+  const data = await computeReportData(sessionId);
+  if (!data) return null;
+
   const report = await prisma.report.create({
     data: {
       sessionId,
       code: generateReportCode(),
-      score,
+      score: data.score,
       data: data as unknown as Prisma.InputJsonValue,
     },
   });
   await prisma.session.update({ where: { id: sessionId }, data: { status: 'COMPLETED' } });
-  await logEvent(sessionId, 'report.generated', `Rapport ${report.code} généré (score ${score}%)`, {
+  await logEvent(sessionId, 'report.generated', `Rapport ${report.code} généré (score ${data.score}%)`, {
     code: report.code,
-    score,
+    score: data.score,
   });
   return report;
+}
+
+/**
+ * Recalcule le rapport après réconciliation des différences (les deux
+ * participants se sont mis d'accord sur une réponse commune). Garde le même
+ * code/id de rapport — seules les données et le score sont mis à jour.
+ */
+export async function regenerateReport(sessionId: string) {
+  const existing = await prisma.report.findUnique({ where: { sessionId } });
+  if (!existing) return null;
+
+  const data = await computeReportData(sessionId);
+  if (!data) return existing;
+
+  return prisma.report.update({
+    where: { sessionId },
+    data: { score: data.score, data: data as unknown as Prisma.InputJsonValue },
+  });
 }
 
 function buildTags(score: number, sortedPages: PageResult[]): string[] {

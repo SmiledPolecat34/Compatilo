@@ -6,6 +6,7 @@ import { badRequest, conflict, forbidden, notFound } from '../lib/errors.js';
 import { requireAdmin } from '../middleware/auth.js';
 import { validateBody } from '../middleware/validate.js';
 import { logEvent } from '../services/timeline.js';
+import { applyDefaultAnswers } from '../services/defaultAnswers.js';
 import { signToken } from '../lib/jwt.js';
 import { env } from '../config/env.js';
 
@@ -188,6 +189,7 @@ adminSessionsRouter.post('/:id/join', validateBody(joinAsAdminSchema), async (re
         `${req.body.firstName} (administrateur·rice) a rejoint la session`,
         { slot: nextSlot },
       );
+      await applyDefaultAnswers(participant.id, session.versionId);
     }
 
     const token = signToken(

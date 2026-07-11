@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import { badRequest, conflict, notFound } from '../lib/errors.js';
 import { requireAdmin } from '../middleware/auth.js';
@@ -166,6 +167,45 @@ adminQuestionnairesRouter.put(
         },
       });
       res.json(updated);
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+// ── Réponses par défaut (préremplies à la création d'un participant) ──
+// Indépendant du statut de la version : sert surtout sur la version
+// PUBLISHED, celle réellement utilisée par les nouvelles sessions.
+const defaultAnswersSchema = z.object({
+  answers: z
+    .array(z.object({ questionId: z.string().min(1), value: z.unknown() }))
+    .max(200),
+});
+
+adminQuestionnairesRouter.patch(
+  '/versions/:versionId/default-answers',
+  validateBody(defaultAnswersSchema),
+  async (req, res, next) => {
+    try {
+      const version = await prisma.questionnaireVersion.findUnique({
+        where: { id: req.params.versionId },
+        include: { pages: { select: { id: true } } },
+      });
+      if (!version) throw notFound();
+      const pageIds = new Set(version.pages.map((p) => p.id));
+
+      const { answers } = req.body as z.infer<typeof defaultAnswersSchema>;
+      for (const { questionId, value } of answers) {
+        const question = await prisma.question.findUnique({ where: { id: questionId } });
+        if (!question || !pageIds.has(question.pageId)) {
+          throw badRequest('Question introuvable dans ce questionnaire.');
+        }
+        await prisma.question.update({
+          where: { id: questionId },
+          data: { defaultValue: value === null ? Prisma.JsonNull : (value as object) },
+        });
+      }
+      res.json({ ok: true });
     } catch (err) {
       next(err);
     }

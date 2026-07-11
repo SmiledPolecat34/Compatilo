@@ -48,7 +48,29 @@ function TextQuestion({ question, value, onChange }: QuestionComponentProps) {
 }
 
 function PhoneQuestion(props: QuestionComponentProps) {
-  return <input className="input" inputMode="tel" autoComplete="tel" value={getString(props.value)} onChange={(e) => props.onChange(e.target.value)} placeholder="+33 6 12 34 56 78" />;
+  function handleChange(e: ChangeEvent<HTMLInputElement>) {
+    const raw = e.target.value;
+    let digits = 0;
+    let capped = '';
+    for (const char of raw) {
+      if (/\d/.test(char)) {
+        if (digits >= 10) continue;
+        digits += 1;
+      }
+      capped += char;
+    }
+    props.onChange(capped);
+  }
+  return (
+    <input
+      className="input"
+      inputMode="tel"
+      autoComplete="tel"
+      value={getString(props.value)}
+      onChange={handleChange}
+      placeholder="+33 6 12 34 56 78"
+    />
+  );
 }
 
 function DateQuestion(props: QuestionComponentProps) {
@@ -162,14 +184,9 @@ function CityQuestion({ value, onChange }: QuestionComponentProps) {
   return (
     <div className="space-y-3">
       <input className="input" value={current.city} onChange={(e) => update({ city: e.target.value })} placeholder="Recherche ou saisis ta ville" />
-      <div className="grid gap-2 sm:grid-cols-2">
-        <button type="button" className="btn-secondary" onClick={useGeolocation} disabled={locating}>
-          {locating ? 'Localisation…' : 'Utiliser ma position'}
-        </button>
-        <a className="btn-secondary" href={`https://www.google.com/maps/search/${encodeURIComponent(current.city || 'ville')}`} target="_blank" rel="noreferrer">
-          Ouvrir Google Maps
-        </a>
-      </div>
+      <button type="button" className="btn-secondary w-full" onClick={useGeolocation} disabled={locating}>
+        {locating ? 'Localisation…' : '📍 Utiliser ma position actuelle'}
+      </button>
       <input className="input" value={coords} onChange={(e) => applyCoords(e.target.value)} placeholder="Coordonnées carte : latitude, longitude" />
     </div>
   );

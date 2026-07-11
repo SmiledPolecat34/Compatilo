@@ -4,6 +4,7 @@ import { api, ApiError, tokens } from '../../api/client';
 import type { ReportPayload } from '../../types';
 import ReportView from '../../components/report/ReportView';
 import SignaturePad from '../../components/report/SignaturePad';
+import ContractModal from '../../components/report/ContractModal';
 import Logo from '../../components/Logo';
 import ErrorPage from '../../components/ErrorPage';
 import { PageSpinner } from '../../components/Skeleton';
@@ -13,6 +14,7 @@ export default function ReportPage() {
   const [payload, setPayload] = useState<ReportPayload | null>(null);
   const [error, setError] = useState('');
   const [errorStatus, setErrorStatus] = useState<number | null>(null);
+  const [showContract, setShowContract] = useState(false);
 
   const load = useCallback(() => {
     api<ReportPayload>('/api/public/me/report', { auth: 'participant' })
@@ -98,11 +100,16 @@ export default function ReportPage() {
 
   return (
     <div className="mx-auto min-h-dvh w-full max-w-4xl px-4 py-8">
-      <div className="no-print mb-6 flex items-center justify-between">
+      <div className="no-print mb-6 flex flex-wrap items-center justify-between gap-3">
         <Logo size={34} />
-        <button type="button" className="btn-secondary" onClick={() => window.print()}>
-          Exporter en PDF
-        </button>
+        <div className="flex gap-2">
+          <button type="button" className="btn-primary" onClick={() => setShowContract(true)}>
+            Voir le contrat 📜
+          </button>
+          <button type="button" className="btn-secondary" onClick={() => window.print()}>
+            Exporter en PDF
+          </button>
+        </div>
       </div>
       <ReportView
         code={report.code}
@@ -113,6 +120,17 @@ export default function ReportPage() {
         myParticipantId={report.myParticipantId}
         signatureSlot={<SignaturePad onSave={saveSignature} />}
       />
+      {showContract && (
+        <ContractModal
+          code={report.code}
+          score={report.score}
+          generatedAt={report.generatedAt}
+          data={report.data}
+          signatures={report.signatures}
+          myParticipantId={report.myParticipantId}
+          onClose={() => setShowContract(false)}
+        />
+      )}
     </div>
   );
 }

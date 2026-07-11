@@ -113,10 +113,11 @@ model Question {
   prompt    String
   helpText  String?
   position  Int
-  isActive  Boolean  @default(true)
-  required  Boolean  @default(true)
-  config    Json     @default("{}")
-  answers   Answer[]
+  isActive     Boolean  @default(true)
+  required     Boolean  @default(true)
+  config       Json     @default("{}")
+  defaultValue Json? // réponse de base définie par l'admin, préremplie à la création d'un participant
+  answers      Answer[]
 
   @@index([pageId, position])
 }

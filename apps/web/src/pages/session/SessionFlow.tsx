@@ -164,6 +164,8 @@ export default function SessionFlow() {
   const isLastPage = pageIndex === data.questionnaire.pages.length - 1;
   const allAnswered = requiredAnswered === requiredQuestions.length;
   const favoritesOk = favorites.size >= data.favoritesRule.min;
+  const favoritesDisplayCap =
+    favorites.size >= data.favoritesRule.min ? data.favoritesRule.max : data.favoritesRule.min;
 
   return (
     <div className="mx-auto min-h-dvh w-full max-w-2xl px-3 pb-32 pt-4 sm:px-4 sm:pt-6">
@@ -176,7 +178,7 @@ export default function SessionFlow() {
               {saving ? 'Sauvegarde…' : `${answeredCount}/${allQuestions.length}`}
             </span>
             <span className="rounded-full bg-brand-100 px-2.5 py-1 font-semibold text-brand-700">
-              ⭐ {favorites.size}/{data.favoritesRule.max}
+              ⭐ {favorites.size}/{favoritesDisplayCap}
             </span>
           </div>
         </div>
@@ -259,6 +261,14 @@ export default function SessionFlow() {
         className="fixed inset-x-0 bottom-0 border-t border-brand-100 bg-[color-mix(in_oklab,var(--surface-solid)_90%,transparent)] p-3 backdrop-blur sm:p-4"
         style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
       >
+        {!data.readOnly && (
+          <p className="mx-auto mb-2 max-w-2xl text-center text-xs text-slate-500">
+            ⭐ {favorites.size}/{favoritesDisplayCap} favoris —{' '}
+            {favoritesOk
+              ? 'tu peux encore en ajouter, ou terminer.'
+              : `sélectionne au moins ${data.favoritesRule.min} réponses favorites.`}
+          </p>
+        )}
         <div className="mx-auto grid max-w-2xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 sm:gap-3">
           <button
             type="button"

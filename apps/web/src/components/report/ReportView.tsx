@@ -1,5 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
-import QRCode from 'qrcode';
+import type { ReactNode } from 'react';
 import type { MatchKind, ReportData, TrileanValue } from '../../types';
 import ScoreDonut from './ScoreDonut';
 
@@ -34,17 +33,7 @@ export default function ReportView({
   signatureSlot,
   myParticipantId,
 }: ReportViewProps) {
-  const [qrUrl, setQrUrl] = useState('');
   const date = new Date(generatedAt);
-
-  useEffect(() => {
-    QRCode.toDataURL(window.location.origin, {
-      width: 160,
-      margin: 1,
-      color: { dark: '#481f79', light: '#ffffff00' },
-    }).then(setQrUrl);
-  }, []);
-
   const [a, b] = data.participants;
   const questionById = new Map(
     data.pages.flatMap((p) => p.results.map((r) => [r.questionId, r] as const)),
@@ -56,6 +45,9 @@ export default function ReportView({
   const commons = data.pages.flatMap((p) =>
     p.results.filter((r) => r.kind === 'MATCH').map((r) => ({ ...r, pageTitle: p.title })),
   );
+  // Infos perso, réseaux, date de naissance, ville, origines : pas de vraie
+  // "compatibilité" à afficher, ce sont des pages sans réponse comparable.
+  const themedPages = data.pages.filter((p) => p.results.some((r) => r.kind !== null));
 
   return (
     <article className="card print-page mx-auto w-full max-w-3xl overflow-hidden">
@@ -104,7 +96,7 @@ export default function ReportView({
         <section>
           <SectionTitle>Compatibilité par thème</SectionTitle>
           <div className="space-y-3">
-            {data.pages.map((p) => (
+            {themedPages.map((p) => (
               <div key={p.pageId}>
                 <div className="mb-1 flex items-baseline justify-between text-sm">
                   <span className="font-semibold text-slate-700">{p.title}</span>
@@ -130,7 +122,7 @@ export default function ReportView({
                 key={p.id}
                 className="rounded-3xl border border-brand-100 bg-gradient-to-br from-brand-50 to-rose-50 p-6"
               >
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-2xl font-bold text-brand-600 shadow-sm">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-surface text-2xl font-bold text-brand-600 shadow-sm">
                   {p.firstName.charAt(0).toUpperCase()}
                 </div>
                 <h3 className="mt-3 font-display text-xl font-bold text-brand-900">
@@ -151,7 +143,11 @@ export default function ReportView({
                     if (!q) return null;
                     const value = p.slot === 1 ? q.valueA : q.valueB;
                     return (
-                      <div key={qid} className="rounded-xl bg-white/80 px-3 py-2 text-sm">
+                      <div
+                        key={qid}
+                        className="rounded-xl px-3 py-2 text-sm"
+                        style={{ backgroundColor: 'color-mix(in oklab, var(--surface-solid) 80%, transparent)' }}
+                      >
                         <span className="text-slate-700">{q.prompt}</span>
                         {value && (
                           <span
@@ -201,7 +197,7 @@ export default function ReportView({
                     <div
                       key={r.questionId}
                       className={`flex flex-col gap-2 px-4 py-3 text-sm sm:flex-row sm:items-center ${
-                        i % 2 ? 'bg-brand-50/50' : 'bg-white'
+                        i % 2 ? 'bg-brand-50/50' : 'bg-surface'
                       }`}
                     >
                       <span className="flex-1 text-slate-700">
@@ -265,7 +261,6 @@ export default function ReportView({
 
         {/* Pied de rapport */}
         <footer className="flex flex-col items-center gap-3 border-t border-brand-100 pt-8 text-center">
-          {qrUrl && <img src={qrUrl} alt="QR code Compatilo" width={110} height={110} />}
           <p className="text-xs text-slate-500">
             Rapport {code} — généré par Compatilo le{' '}
             {date.toLocaleDateString('fr-FR')} à{' '}
@@ -295,7 +290,7 @@ function AnswerList({
   return (
     <div className="space-y-2">
       {items.map((r) => (
-        <div key={r.questionId} className="rounded-2xl border border-brand-100 bg-white px-4 py-3">
+        <div key={r.questionId} className="rounded-2xl border border-brand-100 bg-surface px-4 py-3">
           <p className="text-sm font-medium text-slate-700">{r.prompt}</p>
           <p className="mt-1 text-xs text-slate-500">
             {r.pageTitle} — {a} :{' '}

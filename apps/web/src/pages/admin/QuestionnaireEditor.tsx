@@ -16,9 +16,10 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { api } from '../../api/client';
-import type { EditorPage, EditorQuestion } from '../../types';
+import type { AnswerValue, EditorPage, EditorQuestion } from '../../types';
 import { Skeleton } from '../../components/Skeleton';
 import { useToast } from '../../components/ToastProvider';
+import { getQuestionComponent } from '../../components/questions/registry';
 
 interface VersionPayload {
   id: string;
@@ -38,6 +39,7 @@ interface VersionPayload {
       isActive: boolean;
       required: boolean;
       config: Record<string, unknown>;
+      defaultValue?: unknown;
     }[];
   }[];
 }
@@ -55,6 +57,9 @@ export default function QuestionnaireEditor() {
   const [saveState, setSaveState] = useState<'saved' | 'saving' | 'dirty' | 'error'>('saved');
   const [error, setError] = useState('');
   const saveTimer = useRef<ReturnType<typeof setTimeout>>();
+  const [showDefaults, setShowDefaults] = useState(false);
+  const [defaultAnswers, setDefaultAnswers] = useState<Record<string, unknown>>({});
+  const [savingDefaults, setSavingDefaults] = useState(false);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
@@ -81,9 +86,36 @@ export default function QuestionnaireEditor() {
             })),
           })),
         );
+        const defaults: Record<string, unknown> = {};
+        for (const p of v.pages) {
+          for (const q of p.questions) {
+            if (q.defaultValue !== null && q.defaultValue !== undefined) {
+              defaults[q.id] = q.defaultValue;
+            }
+          }
+        }
+        setDefaultAnswers(defaults);
       })
       .catch((err) => toast.error(err instanceof Error ? err.message : 'Chargement impossible.'));
   }, [versionId, toast]);
+
+  async function saveDefaultAnswers() {
+    setSavingDefaults(true);
+    try {
+      await api(`/api/admin/questionnaires/versions/${versionId}/default-answers`, {
+        method: 'PATCH',
+        auth: 'admin',
+        body: {
+          answers: Object.entries(defaultAnswers).map(([questionId, value]) => ({ questionId, value })),
+        },
+      });
+      toast.success('Réponses par défaut enregistrées.');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur');
+    } finally {
+      setSavingDefaults(false);
+    }
+  }
 
   // Sauvegarde automatique (débounce) de la structure complète
   const scheduleSave = useCallback(
@@ -246,10 +278,69 @@ export default function QuestionnaireEditor() {
             {saveState === 'error' && <span className="text-rose-500">{error}</span>}
           </p>
         </div>
-        <button type="button" className="btn-primary" onClick={publish}>
-          Publier cette version
-        </button>
+        <div className="flex gap-2">
+          <button type="button" className="btn-secondary" onClick={() => setShowDefaults((v) => !v)}>
+            {showDefaults ? 'Masquer' : 'Réponses par défaut'}
+          </button>
+          <button type="button" className="btn-primary" onClick={publish}>
+            Publier cette version
+          </button>
+        </div>
       </div>
+
+      {showDefaults && page && (
+        <div className="card mb-6 space-y-4 p-6">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 className="font-display text-lg font-bold text-brand-900">
+                Réponses par défaut — {page.title || 'Sans titre'}
+              </h2>
+              <p className="text-sm text-slate-500">
+                Préremplissent chaque nouveau participant de ce questionnaire ; modifiables
+                librement ensuite dans chaque session.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={saveDefaultAnswers}
+              disabled={savingDefaults}
+            >
+              {savingDefaults ? 'Enregistrement…' : 'Enregistrer les réponses par défaut'}
+            </button>
+          </div>
+          <div className="space-y-3">
+            {page.questions.filter((q) => q.id).length === 0 && (
+              <p className="text-sm text-slate-500">
+                Enregistre d'abord la structure de cette page pour pouvoir définir des réponses par
+                défaut.
+              </p>
+            )}
+            {page.questions
+              .filter((q): q is EditorQuestion & { id: string } => Boolean(q.id))
+              .map((q) => {
+                const QuestionComponent = getQuestionComponent(q.type);
+                return (
+                  <div key={q.id} className="rounded-xl border border-brand-100 p-4">
+                    <p className="mb-2 text-sm font-semibold text-slate-700">{q.prompt}</p>
+                    <QuestionComponent
+                      question={{
+                        id: q.id,
+                        type: q.type,
+                        prompt: q.prompt,
+                        helpText: q.helpText ?? null,
+                        required: q.required,
+                        config: q.config,
+                      }}
+                      value={defaultAnswers[q.id] as AnswerValue | undefined}
+                      onChange={(value) => setDefaultAnswers((prev) => ({ ...prev, [q.id]: value }))}
+                    />
+                  </div>
+                );
+              })}
+          </div>
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
         {/* Liste des pages */}

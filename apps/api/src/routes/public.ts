@@ -9,6 +9,7 @@ import { requireParticipant } from '../middleware/auth.js';
 import { validateBody } from '../middleware/validate.js';
 import { logEvent } from '../services/timeline.js';
 import { applyIdentityDisplay, generateReport, type ReportData } from '../services/report.js';
+import { applyDefaultAnswers } from '../services/defaultAnswers.js';
 import { isTrilean } from '../domain/compatibility.js';
 import { computeDisplayName, type IdentityDisplayMode } from '../domain/identity.js';
 
@@ -58,7 +59,10 @@ function validateAnswerValue(question: { type: string; prompt: string; config: u
   if (question.type === 'phone') {
     if (isBlank(value)) throw badRequest('Le numéro de téléphone est requis.');
     const phone = String(value).trim();
-    if (phone.length < 3 || !PHONE_RE.test(phone)) throw badRequest('Numéro de téléphone invalide.');
+    const digitCount = (phone.match(/\d/g) ?? []).length;
+    if (phone.length < 3 || !PHONE_RE.test(phone) || digitCount > 10) {
+      throw badRequest('Numéro de téléphone invalide (10 chiffres maximum).');
+    }
     return phone;
   }
   if (question.type === 'date') {
@@ -191,6 +195,7 @@ publicRouter.post('/join/check', pinLimiter, validateBody(pinSchema), async (req
         firstName: computeDisplayName(mode, p.firstName, p.nickname, p.slot),
         nickname: null,
         completed: Boolean(p.completedAt),
+        isAdmin: p.isAdmin,
       })),
     });
   } catch (err) {
@@ -244,6 +249,7 @@ publicRouter.post('/join/enter', pinLimiter, validateBody(enterSchema), async (r
       await logEvent(session.id, 'participant.joined', `${firstName} a rejoint la session`, {
         slot: nextSlot,
       });
+      await applyDefaultAnswers(participant.id, session.versionId);
     }
 
     const token = signToken(

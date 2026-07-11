@@ -8,7 +8,13 @@ interface CheckResult {
   label: string | null;
   completed: boolean;
   reportAccessEnabled: boolean;
-  participants: { slot: number; firstName: string; nickname: string | null; completed: boolean }[];
+  participants: {
+    slot: number;
+    firstName: string;
+    nickname: string | null;
+    completed: boolean;
+    isAdmin: boolean;
+  }[];
 }
 
 interface EnterResult {
@@ -16,7 +22,7 @@ interface EnterResult {
   participant: { id: string; slot: number; firstName: string; completed: boolean };
 }
 
-type Step = 'pin' | 'who' | 'profile';
+type Step = 'pin' | 'profile';
 
 export default function PinModal({
   open,
@@ -30,7 +36,6 @@ export default function PinModal({
   const navigate = useNavigate();
   const [step, setStep] = useState<Step>('pin');
   const [pin, setPin] = useState(initialPin);
-  const [check, setCheck] = useState<CheckResult | null>(null);
   const [firstName, setFirstName] = useState('');
   const [shareLocation, setShareLocation] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -62,8 +67,15 @@ export default function PinModal({
         method: 'POST',
         body: { pin },
       });
-      setCheck(result);
-      setStep(result.participants.length > 0 ? 'who' : 'profile');
+      // Sur le site public, on est toujours l'invité·e : l'admin rejoint
+      // depuis son panel. Si l'invité·e a déjà un slot, on le reprend
+      // directement, sans jamais demander "qui es-tu ?".
+      const guest = result.participants.find((p) => !p.isAdmin);
+      if (guest) {
+        await enter(guest.slot);
+      } else {
+        setStep('profile');
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur inconnue');
     } finally {
@@ -139,7 +151,6 @@ export default function PinModal({
         <div className="flex items-start justify-between">
           <h2 className="font-display text-2xl font-bold text-brand-900">
             {step === 'pin' && 'Code PIN'}
-            {step === 'who' && 'Qui es-tu ?'}
             {step === 'profile' && 'Fais-toi connaître'}
           </h2>
           <button type="button" className="btn-ghost -mr-2 -mt-1 text-slate-500" onClick={onClose} aria-label="Fermer">
@@ -166,42 +177,6 @@ export default function PinModal({
             <button type="button" className="btn-primary mt-5 w-full" onClick={verifyPin} disabled={loading || pin.length !== 6}>
               {loading ? 'Vérification…' : 'Continuer'}
             </button>
-          </div>
-        )}
-
-        {step === 'who' && check && (
-          <div className="mt-5 space-y-3">
-            {check.label && <p className="text-slate-500">Session « {check.label} »</p>}
-            {check.participants.map((p) => (
-              <button
-                key={p.slot}
-                type="button"
-                className="card flex w-full items-center justify-between px-5 py-4 text-left transition hover:border-brand-300"
-                onClick={() => enter(p.slot)}
-                disabled={loading}
-              >
-                <div>
-                  <div className="font-semibold text-brand-900">
-                    {p.firstName} {p.nickname ? `« ${p.nickname} »` : ''}
-                  </div>
-                  <div className="text-sm text-slate-500">
-                    {p.completed ? 'Questionnaire terminé ✓' : 'Reprendre le questionnaire'}
-                  </div>
-                </div>
-                <span aria-hidden>→</span>
-              </button>
-            ))}
-            {check.participants.length < 2 && (
-              <button
-                type="button"
-                className="btn-secondary w-full"
-                onClick={() => setStep('profile')}
-                disabled={loading}
-              >
-                Je suis quelqu'un d'autre
-              </button>
-            )}
-            {error && <p className="text-sm font-medium text-rose-600">{error}</p>}
           </div>
         )}
 

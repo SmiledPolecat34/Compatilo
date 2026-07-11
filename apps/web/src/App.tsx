@@ -15,11 +15,13 @@ import StatusPage from './pages/StatusPage';
 import ErrorPage from './components/ErrorPage';
 import { PlayerProvider } from './music/PlayerContext';
 import MiniPlayer from './music/MiniPlayer';
+import ThemeCycleButton from './theme/ThemeCycleButton';
 
 export default function App() {
   return (
     <PlayerProvider>
       <MiniPlayer />
+      <ThemeCycleButton />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/join/:pin" element={<Home />} />

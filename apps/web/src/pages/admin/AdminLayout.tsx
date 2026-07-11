@@ -3,7 +3,6 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { api, tokens } from '../../api/client';
 import Logo from '../../components/Logo';
 import { PageSpinner } from '../../components/Skeleton';
-import ThemeToggle from '../../theme/ThemeToggle';
 
 export default function AdminLayout() {
   const navigate = useNavigate();
@@ -58,7 +57,6 @@ export default function AdminLayout() {
           <button type="button" className="btn-ghost shrink-0 text-slate-500" onClick={logout}>
             Déconnexion
           </button>
-          <ThemeToggle />
         </nav>
       </header>
       <Outlet />

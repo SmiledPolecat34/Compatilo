@@ -2,17 +2,20 @@ import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
-import { verifyPassword } from '../lib/crypto.js';
+import { verifyPassword, generateDeviceToken, hashDeviceToken } from '../lib/crypto.js';
 import { generateTotpSecret, totpProvisioningUri, verifyTotp } from '../lib/totp.js';
 import { signToken, verifyToken } from '../lib/jwt.js';
 import { badRequest, notFound, tooMany, unauthorized } from '../lib/errors.js';
 import { requireAdmin } from '../middleware/auth.js';
 import { validateBody } from '../middleware/validate.js';
+import { env, isProd } from '../config/env.js';
 
 export const adminAuthRouter = Router();
 
 const MAX_OTP_ATTEMPTS = 5;
 const OTP_LOCK_MS = 15 * 60 * 1000;
+const TRUSTED_DEVICE_COOKIE = 'compatilo_trusted_device';
+const TRUSTED_DEVICE_MS = env.TRUSTED_DEVICE_DAYS * 24 * 60 * 60 * 1000;
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -59,6 +62,24 @@ adminAuthRouter.post('/login', loginLimiter, validateBody(loginSchema), async (r
       return;
     }
 
+    const deviceCookie = req.cookies?.[TRUSTED_DEVICE_COOKIE] as string | undefined;
+    if (deviceCookie) {
+      const device = await prisma.trustedDevice.findUnique({
+        where: { tokenHash: hashDeviceToken(deviceCookie) },
+      });
+      if (device && device.adminId === admin.id && device.expiresAt > new Date()) {
+        await prisma.trustedDevice.update({
+          where: { id: device.id },
+          data: { lastUsedAt: new Date() },
+        });
+        res.json({
+          ...issueAdminSession(admin.id, admin.email, admin.tokenVersion),
+          twoFactorSkipped: true,
+        });
+        return;
+      }
+    }
+
     const pendingToken = signToken({ kind: 'admin_pending', adminId: admin.id }, '10m');
     res.json({ requires2FA: true, method: 'TOTP', pendingToken });
   } catch (err) {
@@ -69,6 +90,7 @@ adminAuthRouter.post('/login', loginLimiter, validateBody(loginSchema), async (r
 const verifySchema = z.object({
   pendingToken: z.string().min(1),
   code: z.string().regex(/^\d{6}$/, 'Code à 6 chiffres attendu'),
+  trustDevice: z.boolean().optional(),
 });
 
 adminAuthRouter.post('/verify-2fa', otpLimiter, validateBody(verifySchema), async (req, res, next) => {
@@ -103,6 +125,25 @@ adminAuthRouter.post('/verify-2fa', otpLimiter, validateBody(verifySchema), asyn
       where: { id: admin.id },
       data: { otpAttempts: 0, otpLockedUntil: null, otpCodeHash: null, otpExpiresAt: null },
     });
+
+    if (req.body.trustDevice) {
+      const deviceToken = generateDeviceToken();
+      await prisma.trustedDevice.create({
+        data: {
+          adminId: admin.id,
+          tokenHash: hashDeviceToken(deviceToken),
+          label: req.headers['user-agent']?.slice(0, 120) ?? null,
+          expiresAt: new Date(Date.now() + TRUSTED_DEVICE_MS),
+        },
+      });
+      res.cookie(TRUSTED_DEVICE_COOKIE, deviceToken, {
+        httpOnly: true,
+        secure: isProd,
+        sameSite: isProd ? 'none' : 'lax',
+        maxAge: TRUSTED_DEVICE_MS,
+        path: '/api/admin/auth',
+      });
+    }
 
     res.json(issueAdminSession(admin.id, admin.email, admin.tokenVersion));
   } catch (err) {

@@ -30,7 +30,7 @@ const schema = z.object({
 
   // Stockage des fichiers audio uploadés (musique)
   MUSIC_UPLOAD_DIR: z.string().default('uploads/audio'),
-  MUSIC_MAX_FILE_MB: z.coerce.number().default(25),
+  MUSIC_MAX_FILE_MB: z.coerce.number().default(50),
 });
 
 const parsed = schema.safeParse(process.env);

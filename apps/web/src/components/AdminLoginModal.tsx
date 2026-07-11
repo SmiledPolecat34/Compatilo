@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { api, tokens } from '../api/client';
 import type { LoginChallenge, LoginSuccess } from '../types';
 import { useEscapeToClose } from '../hooks/useEscapeToClose';
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 
 type Step = 'password' | '2fa';
 
@@ -12,6 +13,7 @@ export default function AdminLoginModal({ open, onClose }: { open: boolean; onCl
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
+  const [trustDevice, setTrustDevice] = useState(true);
   const [pendingToken, setPendingToken] = useState('');
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
@@ -29,6 +31,7 @@ export default function AdminLoginModal({ open, onClose }: { open: boolean; onCl
   }, [open]);
 
   useEscapeToClose(open, onClose);
+  useBodyScrollLock(open);
 
   if (!open) return null;
 
@@ -64,7 +67,7 @@ export default function AdminLoginModal({ open, onClose }: { open: boolean; onCl
     try {
       const result = await api<LoginSuccess>('/api/admin/auth/verify-2fa', {
         method: 'POST',
-        body: { pendingToken, code },
+        body: { pendingToken, code, trustDevice },
       });
       tokens.set('admin', result.token);
       onClose();
@@ -110,11 +113,13 @@ export default function AdminLoginModal({ open, onClose }: { open: boolean; onCl
               </label>
               <input
                 id="admin-email"
+                name="email"
                 type="email"
                 className="input"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                autoComplete="username"
+                autoComplete="username email"
+                enterKeyHint="next"
                 autoFocus
                 required
               />
@@ -125,11 +130,13 @@ export default function AdminLoginModal({ open, onClose }: { open: boolean; onCl
               </label>
               <input
                 id="admin-password"
+                name="password"
                 type="password"
                 className="input"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="current-password"
+                enterKeyHint="go"
                 required
               />
             </div>
@@ -147,9 +154,11 @@ export default function AdminLoginModal({ open, onClose }: { open: boolean; onCl
               </label>
               <input
                 id="admin-code"
+                name="otp"
                 className="input text-center text-2xl font-bold tracking-[0.3em] sm:tracking-[0.4em]"
                 inputMode="numeric"
                 autoComplete="one-time-code"
+                enterKeyHint="go"
                 maxLength={6}
                 value={code}
                 onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
@@ -157,6 +166,18 @@ export default function AdminLoginModal({ open, onClose }: { open: boolean; onCl
                 required
               />
             </div>
+            <label className="flex cursor-pointer items-start gap-2 text-sm text-slate-600">
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4 accent-brand-600"
+                checked={trustDevice}
+                onChange={(e) => setTrustDevice(e.target.checked)}
+              />
+              <span>
+                Faire confiance à cet appareil pendant 30 jours (plus besoin du code à chaque
+                connexion).
+              </span>
+            </label>
             {error && <p className="text-sm font-medium text-rose-600">{error}</p>}
             <button
               type="submit"

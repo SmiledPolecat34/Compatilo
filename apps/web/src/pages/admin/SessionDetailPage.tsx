@@ -1,7 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api, tokens } from '../../api/client';
-import type { IdentityDisplayMode, PlaylistSummary, SessionDetail, TimelineEvent } from '../../types';
+import type {
+  AnswerValue,
+  IdentityDisplayMode,
+  ParticipantAnswers,
+  PlaylistSummary,
+  SessionDetail,
+  TimelineEvent,
+} from '../../types';
 import ReportView from '../../components/report/ReportView';
 import SessionStatusBadge from '../../components/SessionStatusBadge';
 import { Skeleton } from '../../components/Skeleton';
@@ -14,6 +21,42 @@ const IDENTITY_LABELS: Record<IdentityDisplayMode, string> = {
   BOTH: 'Prénom + surnom',
   NONE: 'Aucun (anonyme)',
 };
+
+const TRILEAN_LABELS: Record<string, string> = { YES: 'Oui', POSSIBLE: 'Possible', NO: 'Non' };
+
+function formatAnswerValue(value: AnswerValue | null): string {
+  if (value === null || value === undefined || value === '') return '—';
+  if (typeof value === 'string') return TRILEAN_LABELS[value] ?? value;
+  if (typeof value === 'object' && 'city' in value) {
+    return value.city || '—';
+  }
+  if (typeof value === 'object' && 'selected' in value) {
+    const parts = [...value.selected];
+    if (value.custom) parts.push(value.custom);
+    return parts.length > 0 ? parts.join(', ') : '—';
+  }
+  return String(value);
+}
+
+interface GroupedEvent {
+  key: string;
+  type: string;
+  message: string;
+  events: TimelineEvent[];
+}
+
+function groupTimeline(events: TimelineEvent[]): GroupedEvent[] {
+  const groups: GroupedEvent[] = [];
+  for (const e of events) {
+    const last = groups[groups.length - 1];
+    if (last && last.type === e.type && last.message === e.message) {
+      last.events.push(e);
+    } else {
+      groups.push({ key: e.id, type: e.type, message: e.message, events: [e] });
+    }
+  }
+  return groups;
+}
 
 const EVENT_ICONS: Record<string, string> = {
   'session.created': '✨',
@@ -46,7 +89,12 @@ export default function SessionDetailPage() {
   const [joinName, setJoinName] = useState('');
   const [joinNickname, setJoinNickname] = useState('');
   const [joining, setJoining] = useState(false);
+  const [expandedParticipantId, setExpandedParticipantId] = useState<string | null>(null);
+  const [recapByParticipant, setRecapByParticipant] = useState<Record<string, ParticipantAnswers>>({});
+  const [recapLoading, setRecapLoading] = useState(false);
+  const [expandedGroupKey, setExpandedGroupKey] = useState<string | null>(null);
   const notesTimer = useRef<ReturnType<typeof setTimeout>>();
+  const groupedTimeline = useMemo(() => groupTimeline(timeline), [timeline]);
 
   const load = useCallback(() => {
     if (!id) return;
@@ -176,14 +224,34 @@ export default function SessionDetailPage() {
         },
       );
       tokens.set('participant', result.token);
-      // Nouvel onglet : le panel admin reste ouvert pendant que tu réponds.
-      window.open(result.participant.completed ? '/session/report' : '/session', '_blank');
       setShowJoinModal(false);
-      load();
+      navigate(result.participant.completed ? '/session/report' : '/session');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erreur');
     } finally {
       setJoining(false);
+    }
+  }
+
+  async function toggleParticipantRecap(participantId: string) {
+    if (expandedParticipantId === participantId) {
+      setExpandedParticipantId(null);
+      return;
+    }
+    setExpandedParticipantId(participantId);
+    if (recapByParticipant[participantId]) return;
+    setRecapLoading(true);
+    try {
+      const recap = await api<ParticipantAnswers>(
+        `/api/admin/sessions/${id}/participants/${participantId}/answers`,
+        { auth: 'admin' },
+      );
+      setRecapByParticipant((prev) => ({ ...prev, [participantId]: recap }));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Chargement des réponses impossible.');
+      setExpandedParticipantId(null);
+    } finally {
+      setRecapLoading(false);
     }
   }
 
@@ -279,36 +347,91 @@ export default function SessionDetailPage() {
               <p className="text-slate-500">Personne n'a encore rejoint la session.</p>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2">
-                {session.participants.map((p) => (
-                  <div key={p.id} className="rounded-lg border border-brand-100 p-4">
-                    <div className="font-semibold text-brand-900">
-                      {p.firstName} {p.nickname && <span className="text-slate-500">« {p.nickname} »</span>}
-                      {p.isAdmin && (
-                        <span className="ml-2 rounded-full bg-brand-100 px-2 py-0.5 text-xs font-semibold text-brand-700">
-                          Moi (admin)
-                        </span>
-                      )}
-                    </div>
-                    <div className="mt-2 space-y-1 text-sm text-slate-500">
-                      <p>
-                        Progression : {p.answeredCount}/{session.totalQuestions} réponses
-                      </p>
-                      <p>Favoris : {p.favoritesCount}</p>
-                      <p>{p.completedAt ? `Terminé le ${new Date(p.completedAt).toLocaleString('fr-FR')}` : 'En cours'}</p>
-                      {p.locationConsent && (
-                        <p>
-                          📍 {p.city ?? 'Ville inconnue'}
-                          {p.latitude != null && p.longitude != null && (
-                            <span className="text-xs text-slate-500">
-                              {' '}
-                              ({p.latitude.toFixed(4)}, {p.longitude.toFixed(4)})
+                {session.participants.map((p) => {
+                  const isExpanded = expandedParticipantId === p.id;
+                  const recap = recapByParticipant[p.id];
+                  return (
+                    <div key={p.id} className="rounded-lg border border-brand-100 p-4 sm:col-span-1">
+                      <button
+                        type="button"
+                        className="w-full text-left"
+                        onClick={() => p.answeredCount > 0 && toggleParticipantRecap(p.id)}
+                        aria-expanded={isExpanded}
+                        disabled={p.answeredCount === 0}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="font-semibold text-brand-900">
+                            {p.firstName}{' '}
+                            {p.nickname && <span className="text-slate-500">« {p.nickname} »</span>}
+                            {p.isAdmin && (
+                              <span className="ml-2 rounded-full bg-brand-100 px-2 py-0.5 text-xs font-semibold text-brand-700">
+                                Moi (admin)
+                              </span>
+                            )}
+                          </div>
+                          {p.answeredCount > 0 && (
+                            <span aria-hidden className="text-slate-400">
+                              {isExpanded ? '▲' : '▼'}
                             </span>
                           )}
-                        </p>
+                        </div>
+                        <div className="mt-2 space-y-1 text-sm text-slate-500">
+                          <p>
+                            Progression : {p.answeredCount}/{session.totalQuestions} réponses
+                          </p>
+                          <p>Favoris : {p.favoritesCount}</p>
+                          <p>
+                            {p.completedAt
+                              ? `Terminé le ${new Date(p.completedAt).toLocaleString('fr-FR')}`
+                              : 'En cours'}
+                          </p>
+                          {p.locationConsent && (
+                            <p>
+                              📍 {p.city ?? 'Ville inconnue'}
+                              {p.latitude != null && p.longitude != null && (
+                                <span className="text-xs text-slate-500">
+                                  {' '}
+                                  ({p.latitude.toFixed(4)}, {p.longitude.toFixed(4)})
+                                </span>
+                              )}
+                            </p>
+                          )}
+                        </div>
+                      </button>
+
+                      {isExpanded && (
+                        <div className="mt-4 space-y-4 border-t border-brand-100 pt-4">
+                          {recapLoading && !recap ? (
+                            <p className="text-sm text-slate-500">Chargement…</p>
+                          ) : (
+                            recap?.pages.map((page) => (
+                              <div key={page.title}>
+                                <h3 className="text-sm font-semibold text-brand-800">{page.title}</h3>
+                                <ul className="mt-2 space-y-2">
+                                  {page.questions.map((q) => (
+                                    <li key={q.id} className="text-sm">
+                                      <p className="text-slate-500">
+                                        {q.prompt}
+                                        {q.isFavorite && (
+                                          <span className="ml-1 text-amber-400" aria-hidden>
+                                            ★
+                                          </span>
+                                        )}
+                                      </p>
+                                      <p className="font-medium text-slate-800">
+                                        {formatAnswerValue(q.value)}
+                                      </p>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            ))
+                          )}
+                        </div>
                       )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </section>
@@ -417,17 +540,46 @@ export default function SessionDetailPage() {
           <section className="card p-4 sm:p-6">
             <h2 className="mb-4 font-display text-lg font-bold text-brand-900">Timeline</h2>
             <ol className="space-y-3">
-              {timeline.map((e) => (
-                <li key={e.id} className="flex gap-3 text-sm">
-                  <span aria-hidden>{EVENT_ICONS[e.type] ?? '•'}</span>
-                  <div>
-                    <p className="text-slate-700">{e.message}</p>
-                    <p className="text-xs text-slate-500">
-                      {new Date(e.createdAt).toLocaleString('fr-FR')}
-                    </p>
-                  </div>
-                </li>
-              ))}
+              {groupedTimeline.map((g) => {
+                const latest = g.events[0];
+                const isMulti = g.events.length > 1;
+                const isExpanded = expandedGroupKey === g.key;
+                return (
+                  <li key={g.key} className="text-sm">
+                    <button
+                      type="button"
+                      className={`flex w-full items-start gap-3 text-left ${isMulti ? 'cursor-pointer' : 'cursor-default'}`}
+                      onClick={() => isMulti && setExpandedGroupKey(isExpanded ? null : g.key)}
+                      disabled={!isMulti}
+                    >
+                      <span aria-hidden>{EVENT_ICONS[g.type] ?? '•'}</span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-slate-700">
+                          {g.message}
+                          {isMulti && (
+                            <span className="ml-2 rounded-full bg-brand-100 px-2 py-0.5 text-xs font-semibold text-brand-700">
+                              x{g.events.length}
+                            </span>
+                          )}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          {new Date(latest.createdAt).toLocaleString('fr-FR')}
+                          {isMulti && <span className="ml-1">{isExpanded ? '▲' : '▼'}</span>}
+                        </p>
+                      </div>
+                    </button>
+                    {isMulti && isExpanded && (
+                      <ul className="ml-7 mt-2 space-y-1 border-l border-brand-100 pl-3">
+                        {g.events.map((e) => (
+                          <li key={e.id} className="text-xs text-slate-500">
+                            {new Date(e.createdAt).toLocaleString('fr-FR')}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </li>
+                );
+              })}
               {timeline.length === 0 && <p className="text-slate-500">Aucun événement.</p>}
             </ol>
           </section>

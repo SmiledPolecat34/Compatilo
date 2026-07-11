@@ -6,6 +6,7 @@ import SessionStatusBadge from '../../components/SessionStatusBadge';
 import { SkeletonCards } from '../../components/Skeleton';
 import { useToast } from '../../components/ToastProvider';
 import { useEscapeToClose } from '../../hooks/useEscapeToClose';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 
 const IDENTITY_LABELS: Record<IdentityDisplayMode, string> = {
   FIRST_NAME: 'Prénom',
@@ -321,6 +322,7 @@ export function Modal({
   children: ReactNode;
 }) {
   useEscapeToClose(true, onClose);
+  useBodyScrollLock(true);
   return (
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm sm:items-center animate-fade-in"

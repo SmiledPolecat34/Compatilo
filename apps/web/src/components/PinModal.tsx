@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, tokens } from '../api/client';
 import { useEscapeToClose } from '../hooks/useEscapeToClose';
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 
 interface CheckResult {
   label: string | null;
@@ -45,6 +46,7 @@ export default function PinModal({
   }, [open, initialPin]);
 
   useEscapeToClose(open, onClose);
+  useBodyScrollLock(open);
 
   if (!open) return null;
 

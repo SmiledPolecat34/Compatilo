@@ -141,6 +141,20 @@ export interface SessionDetail {
   } | null;
 }
 
+export interface ParticipantAnswers {
+  firstName: string;
+  pages: {
+    title: string;
+    questions: {
+      id: string;
+      prompt: string;
+      required: boolean;
+      value: AnswerValue | null;
+      isFavorite: boolean;
+    }[];
+  }[];
+}
+
 export interface TimelineEvent {
   id: string;
   type: string;

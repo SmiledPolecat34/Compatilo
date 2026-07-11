@@ -283,6 +283,60 @@ adminSessionsRouter.get('/:id', async (req, res, next) => {
   }
 });
 
+// ── Récap des réponses d'un participant (consultation admin) ─────────
+adminSessionsRouter.get('/:id/participants/:participantId/answers', async (req, res, next) => {
+  try {
+    const participant = await prisma.participant.findUnique({
+      where: { id: req.params.participantId },
+      include: { answers: true, favorites: { select: { questionId: true } } },
+    });
+    if (!participant || participant.sessionId !== req.params.id) throw notFound();
+
+    const session = await prisma.session.findUnique({
+      where: { id: req.params.id },
+      select: {
+        version: {
+          select: {
+            pages: {
+              where: { isActive: true },
+              orderBy: { position: 'asc' },
+              select: {
+                id: true,
+                title: true,
+                questions: {
+                  where: { isActive: true },
+                  orderBy: { position: 'asc' },
+                  select: { id: true, type: true, prompt: true, required: true },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+    if (!session) throw notFound();
+
+    const answerByQuestion = new Map(participant.answers.map((a) => [a.questionId, a.value]));
+    const favoriteIds = new Set(participant.favorites.map((f) => f.questionId));
+
+    res.json({
+      firstName: participant.firstName,
+      pages: session.version.pages.map((p) => ({
+        title: p.title,
+        questions: p.questions.map((q) => ({
+          id: q.id,
+          prompt: q.prompt,
+          required: q.required,
+          value: answerByQuestion.get(q.id) ?? null,
+          isFavorite: favoriteIds.has(q.id),
+        })),
+      })),
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // ── Mise à jour : notes privées, accès rapport, libellé, expiration ──
 const patchSchema = z.object({
   label: z.string().trim().max(120).nullable().optional(),

@@ -38,12 +38,12 @@ export default function ReportPage() {
     load();
   }, [load, navigate]);
 
-  // L'autre participant n'a pas terminé : on vérifie régulièrement
+  // Le rapport, les réconciliations et les signatures doivent rester synchronisés
+  // entre les deux participant·es sans rechargement manuel.
   useEffect(() => {
-    if (payload && !payload.ready) {
-      const timer = setInterval(load, 8000);
-      return () => clearInterval(timer);
-    }
+    if (!payload) return;
+    const timer = setInterval(load, payload.ready ? 5000 : 8000);
+    return () => clearInterval(timer);
   }, [payload, load]);
 
   if (error) {
@@ -110,6 +110,15 @@ export default function ReportPage() {
   const reconcilableDifferences = report.data.pages
     .flatMap((p) => p.results)
     .filter((r) => r.questionType === 'trilean' && r.kind === 'DIFFERENCE');
+  const allParticipantsSigned = report.data.participants.every((participant) =>
+    report.signatures.some((signature) => signature.participantId === participant.id),
+  );
+  const contractLockedReason =
+    reconcilableDifferences.length > 0
+      ? 'Réglez vos différences avant de voir le contrat.'
+      : !allParticipantsSigned
+        ? 'Le contrat sera disponible quand les 2 personnes auront signé.'
+        : undefined;
 
   return (
     <div className="mx-auto min-h-dvh w-full max-w-4xl px-4 py-8">
@@ -118,13 +127,9 @@ export default function ReportPage() {
       </div>
       <button
         type="button"
-        onClick={() => reconcilableDifferences.length === 0 && setShowContract(true)}
-        disabled={reconcilableDifferences.length > 0}
-        title={
-          reconcilableDifferences.length > 0
-            ? 'Réglez vos différences avant de voir le contrat.'
-            : undefined
-        }
+        onClick={() => !contractLockedReason && setShowContract(true)}
+        disabled={Boolean(contractLockedReason)}
+        title={contractLockedReason}
         className="no-print fixed right-16 top-3 z-40 flex h-11 items-center gap-2 rounded-full border border-brand-100 bg-surface px-4 text-sm font-semibold text-brand-700 shadow-lg transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
       >
         <span aria-hidden>📜</span> Voir le contrat

@@ -93,7 +93,7 @@ export default function ReportView({
         {/* Sommaire */}
         <nav aria-label="Sommaire du rapport" className="rounded-2xl border border-brand-100 bg-surface p-4">
           <p className="mb-2 text-xs font-bold uppercase tracking-wide text-brand-400">Sommaire</p>
-          <ul className="grid gap-1 text-sm sm:grid-cols-2">
+          <ul className="flex snap-x gap-3 overflow-x-auto pb-2 text-sm sm:grid sm:grid-cols-3 sm:overflow-visible sm:pb-0">
             {[
               { href: '#theme', label: 'Compatibilité par thème' },
               { href: '#profils', label: 'Cartes de profil' },
@@ -105,7 +105,7 @@ export default function ReportView({
               <li key={item.href}>
                 <a
                   href={item.href}
-                  className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-brand-700 transition hover:bg-brand-50"
+                  className="flex min-w-44 snap-start items-center justify-between gap-2 rounded-2xl border border-brand-100 bg-brand-50 px-4 py-3 font-semibold text-brand-700 transition hover:-translate-y-0.5 hover:bg-brand-100 sm:min-w-0"
                 >
                   <span>{item.label}</span>
                   {item.count !== undefined && (
@@ -169,8 +169,9 @@ export default function ReportView({
                 {p.city && <p className="text-sm text-slate-500">📍 {p.city}</p>}
                 <div className="mt-4 space-y-2">
                   <p className="text-xs font-bold uppercase tracking-wide text-brand-400">
-                    ⭐ Ses favoris
+                    💜 Le plus important sur toi
                   </p>
+                  {p.favorites.length === 0 && <p className="text-sm text-slate-500">Aucun élément sélectionné.</p>}
                   {p.favorites.map((qid) => {
                     const q = questionById.get(qid);
                     if (!q) return null;
@@ -256,7 +257,7 @@ export default function ReportView({
                       }`}
                     >
                       <span className="flex-1 text-slate-700">
-                        {(r.isFavoriteA || r.isFavoriteB) && <span aria-hidden>⭐ </span>}
+                        {(r.isFavoriteA || r.isFavoriteB) && <span aria-hidden>💜 </span>}
                         {r.prompt}
                       </span>
                       <span className="flex items-center gap-2">

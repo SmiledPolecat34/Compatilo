@@ -16,6 +16,15 @@ const MAX_OTP_ATTEMPTS = 5;
 const OTP_LOCK_MS = 15 * 60 * 1000;
 const TRUSTED_DEVICE_COOKIE = 'compatilo_trusted_device';
 const TRUSTED_DEVICE_MS = env.TRUSTED_DEVICE_DAYS * 24 * 60 * 60 * 1000;
+const webOrigin = new URL(env.WEB_ORIGIN).origin;
+const useCrossSiteTrustedDeviceCookie = webOrigin !== 'http://localhost:5173';
+const trustedDeviceCookieOptions = {
+  httpOnly: true,
+  secure: isProd || env.WEB_ORIGIN.startsWith('https://'),
+  sameSite: (useCrossSiteTrustedDeviceCookie ? 'none' : 'lax') as 'none' | 'lax',
+  maxAge: TRUSTED_DEVICE_MS,
+  path: '/api/admin/auth',
+};
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -136,13 +145,7 @@ adminAuthRouter.post('/verify-2fa', otpLimiter, validateBody(verifySchema), asyn
           expiresAt: new Date(Date.now() + TRUSTED_DEVICE_MS),
         },
       });
-      res.cookie(TRUSTED_DEVICE_COOKIE, deviceToken, {
-        httpOnly: true,
-        secure: isProd,
-        sameSite: isProd ? 'none' : 'lax',
-        maxAge: TRUSTED_DEVICE_MS,
-        path: '/api/admin/auth',
-      });
+      res.cookie(TRUSTED_DEVICE_COOKIE, deviceToken, trustedDeviceCookieOptions);
     }
 
     res.json(issueAdminSession(admin.id, admin.email, admin.tokenVersion));

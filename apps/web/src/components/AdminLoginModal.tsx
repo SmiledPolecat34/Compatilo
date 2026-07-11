@@ -81,16 +81,13 @@ export default function AdminLoginModal({ open, onClose }: { open: boolean; onCl
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm sm:items-center animate-fade-in"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm animate-fade-in"
       onClick={(e) => e.target === e.currentTarget && onClose()}
       role="dialog"
       aria-modal="true"
       aria-label="Connexion administrateur"
     >
-      <div
-        className="card w-full max-w-sm rounded-b-none p-4 sm:rounded-lg sm:p-8 animate-fade-up"
-        style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}
-      >
+      <div className="card max-h-[85dvh] w-full max-w-sm overflow-y-auto rounded-lg p-4 sm:p-8 animate-fade-up">
         <div className="flex items-start justify-between">
           <h2 className="font-display text-2xl font-bold text-brand-900">
             {step === 'password' ? 'Administration' : 'Google Authenticator'}

@@ -269,12 +269,12 @@ export default function MusicPage() {
                 <h3 className="font-semibold text-slate-700">Ajouter une piste</h3>
                 <div>
                   <label className="label" htmlFor="upload">
-                    Fichier (MP3, WAV, OGG)
+                    Fichier (MP3, WAV, OGG, M4A)
                   </label>
                   <input
                     id="upload"
                     type="file"
-                    accept=".mp3,.wav,.ogg,audio/mpeg,audio/wav,audio/ogg"
+                    accept=".mp3,.wav,.ogg,.m4a,audio/mpeg,audio/wav,audio/ogg,audio/mp4,audio/x-m4a"
                     className="input"
                     disabled={busy}
                     onChange={(e) => {

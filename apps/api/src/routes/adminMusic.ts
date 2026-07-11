@@ -21,8 +21,12 @@ const ALLOWED_MIME = new Set([
   'audio/wave',
   'audio/ogg',
   'application/ogg',
+  'audio/mp4',
+  'audio/x-m4a',
+  'audio/m4a',
+  'audio/aac',
 ]);
-const ALLOWED_EXT = new Set(['.mp3', '.wav', '.ogg']);
+const ALLOWED_EXT = new Set(['.mp3', '.wav', '.ogg', '.m4a']);
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -30,7 +34,7 @@ const upload = multer({
   fileFilter: (_req, file, cb) => {
     const ext = (file.originalname.match(/\.[^.]+$/)?.[0] ?? '').toLowerCase();
     if (!ALLOWED_MIME.has(file.mimetype) && !ALLOWED_EXT.has(ext)) {
-      cb(new Error('Formats acceptés : MP3, WAV, OGG.'));
+      cb(new Error('Formats acceptés : MP3, WAV, OGG, M4A.'));
       return;
     }
     cb(null, true);

@@ -100,10 +100,8 @@ function validateAnswerValue(question: { type: string; prompt: string; config: u
     const selected = Array.isArray(raw.selected)
       ? raw.selected.filter((x): x is string => typeof x === 'string' && x.trim().length > 0).map((x) => x.trim())
       : [];
-    const custom = typeof raw.custom === 'string' && raw.custom.trim().length > 0 ? raw.custom.trim() : null;
-    if (custom && custom.length < 3) throw badRequest("L'origine personnalisée doit contenir au moins 3 caractères.");
-    if (selected.length === 0 && !custom) throw badRequest('Sélectionne au moins une origine.');
-    return { selected: [...new Set(selected)], custom };
+    if (selected.length === 0) throw badRequest('Sélectionne au moins une origine.');
+    return { selected: [...new Set(selected)], custom: null };
   }
   throw badRequest(`Type de question non supporté : ${question.type}`);
 }

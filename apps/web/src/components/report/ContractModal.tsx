@@ -47,9 +47,11 @@ export default function ContractModal({
       const fileName = `contrat-compatilo-${code}.png`;
       const file = new File([blob], fileName, { type: 'image/png' });
 
-      // Sur mobile, le partage natif propose "Enregistrer l'image" qui va
-      // directement dans la pellicule (Photos) plutôt que dans Fichiers.
-      if (navigator.canShare?.({ files: [file] })) {
+      // Sur mobile, le partage natif propose "Enregistrer l'image". Sur desktop,
+      // certains navigateurs exposent canShare(files) mais échouent au partage :
+      // on force donc le téléchargement classique hors écrans tactiles.
+      const prefersNativeShare = window.matchMedia('(pointer: coarse)').matches;
+      if (prefersNativeShare && navigator.canShare?.({ files: [file] })) {
         try {
           await navigator.share({ files: [file] });
           return;
@@ -73,13 +75,24 @@ export default function ContractModal({
     try {
       const canvas = await capture();
       if (!canvas) return;
-      // Une seule page, dimensionnée exactement sur le contenu capturé.
-      const pdf = new jsPDF({
-        orientation: canvas.width >= canvas.height ? 'landscape' : 'portrait',
-        unit: 'px',
-        format: [canvas.width, canvas.height],
-      });
-      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, canvas.width, canvas.height);
+      // Export A4 standard : l'image est réduite et centrée dans la page.
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 10;
+      const maxWidth = pageWidth - margin * 2;
+      const maxHeight = pageHeight - margin * 2;
+      const ratio = Math.min(maxWidth / canvas.width, maxHeight / canvas.height);
+      const width = canvas.width * ratio;
+      const height = canvas.height * ratio;
+      pdf.addImage(
+        canvas.toDataURL('image/png'),
+        'PNG',
+        (pageWidth - width) / 2,
+        (pageHeight - height) / 2,
+        width,
+        height,
+      );
       pdf.save(`contrat-compatilo-${code}.pdf`);
     } finally {
       setExporting(false);

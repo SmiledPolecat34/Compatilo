@@ -1,5 +1,5 @@
 import type { ChangeEvent, ComponentType } from 'react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { AnswerValue, QuestionDto, TrileanValue } from '../../types';
 import TrileanQuestion from './TrileanQuestion';
 import { useToast } from '../ToastProvider';
@@ -137,6 +137,14 @@ function CityQuestion({ value, onChange }: QuestionComponentProps) {
     onChange({ ...current, ...patch });
   }
 
+  useEffect(() => {
+    setCoords(
+      current.latitude !== null && current.longitude !== null
+        ? `${current.latitude}, ${current.longitude}`
+        : '',
+    );
+  }, [current.latitude, current.longitude]);
+
   async function useGeolocation() {
     if (!('geolocation' in navigator)) {
       toast.error("Ton navigateur ne prend pas en charge la géolocalisation.");
@@ -155,9 +163,10 @@ function CityQuestion({ value, onChange }: QuestionComponentProps) {
         const geo = await fetch(
           `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=fr`,
         ).then((r) => r.json());
-        update({ city: geo.city || geo.locality || current.city, latitude, longitude, locationConsent: true });
+        const city = geo.city || geo.locality || geo.principalSubdivision || current.city || `Position ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+        update({ city, latitude, longitude, locationConsent: true });
       } catch {
-        update({ latitude, longitude, locationConsent: true });
+        update({ city: current.city || `Position ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`, latitude, longitude, locationConsent: true });
       }
     } catch (err) {
       const code = err instanceof GeolocationPositionError ? err.code : null;
@@ -230,13 +239,6 @@ function OriginsQuestion({ value, onChange }: QuestionComponentProps) {
           </button>
         ))}
       </div>
-      <input
-        className="input"
-        value={current.custom ?? ''}
-        onChange={(e) => onChange({ ...current, custom: e.target.value || null })}
-        minLength={3}
-        placeholder="Origine personnalisée"
-      />
     </div>
   );
 }

@@ -109,7 +109,7 @@ export default function SessionFlow() {
           auth: 'participant',
         });
       } catch {
-        setError('Sauvegarde des favoris impossible.');
+        setError('Sauvegarde des éléments importants impossible.');
       }
     },
     [favorites, data],
@@ -149,7 +149,7 @@ export default function SessionFlow() {
             <p className="mt-2 text-sm leading-relaxed text-slate-700">
               Pendant le questionnaire, sélectionne entre{' '}
               <strong>{data.favoritesRule.min} et {data.favoritesRule.max} réponses ou questions
-              favorites</strong>. Elles apparaîtront ensuite sur ta carte de profil.
+              qui représentent le plus important sur toi</strong>. Elles apparaîtront ensuite sur ta carte de profil.
             </p>
           </div>
           <button type="button" className="btn-primary mt-8 w-full" onClick={() => setPhase('quiz')}>
@@ -178,7 +178,7 @@ export default function SessionFlow() {
               {saving ? 'Sauvegarde…' : `${answeredCount}/${allQuestions.length}`}
             </span>
             <span className="rounded-full bg-brand-100 px-2.5 py-1 font-semibold text-brand-700">
-              ⭐ {favorites.size}/{favoritesDisplayCap}
+              💜 {favorites.size}/{favoritesDisplayCap}
             </span>
           </div>
         </div>
@@ -231,14 +231,14 @@ export default function SessionFlow() {
                     type="button"
                     onClick={() => toggleFavorite(q.id)}
                     disabled={data.readOnly}
-                    aria-label={isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                    aria-label={isFav ? 'Retirer de ce qui est important sur toi' : 'Marquer comme important sur toi'}
                     aria-pressed={isFav}
                     className={`shrink-0 rounded-full p-1.5 text-xl transition active:scale-90 disabled:pointer-events-none disabled:opacity-50 ${
                       isFav ? 'text-amber-400' : 'text-slate-300 hover:text-amber-300'
                     }`}
                   >
                     <span key={isFav ? 'on' : 'off'} className="inline-block animate-pop">
-                      {isFav ? '★' : '☆'}
+                      {isFav ? '💜' : '♡'}
                     </span>
                   </button>
                 </div>
@@ -264,11 +264,11 @@ export default function SessionFlow() {
         style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
       >
         {!data.readOnly && (
-          <p className="mx-auto mb-2 max-w-2xl text-center text-xs text-slate-500">
-            ⭐ {favorites.size}/{favoritesDisplayCap} favoris —{' '}
+          <p className="mx-auto mb-2 max-w-2xl rounded-2xl border border-brand-200 bg-brand-50 px-4 py-2 text-center text-xs font-semibold text-brand-700 shadow-sm sm:text-sm">
+            💜 {favorites.size}/{favoritesDisplayCap} important sur toi —{' '}
             {favoritesOk
               ? 'tu peux encore en ajouter, ou terminer.'
-              : `sélectionne au moins ${data.favoritesRule.min} réponses favorites.`}
+              : `sélectionne au moins ${data.favoritesRule.min} réponses importantes.`}
           </p>
         )}
         <div className="mx-auto grid max-w-2xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 sm:gap-3">
@@ -315,7 +315,7 @@ export default function SessionFlow() {
           <p className="mx-auto mt-2 max-w-2xl text-center text-xs text-slate-500">
             {!allAnswered
               ? `Il reste ${allQuestions.length - answeredCount} question(s) sans réponse.`
-              : `Sélectionne au moins ${data.favoritesRule.min} favoris (⭐) pour terminer.`}
+              : `Sélectionne au moins ${data.favoritesRule.min} éléments importants (💜) pour terminer.`}
           </p>
         )}
       </footer>
